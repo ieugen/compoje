@@ -1,0 +1,44 @@
+#+TITLE: compoje - docker swarm templates
+
+Using Docker compose file spec for Docker Swarm deployment lacks some features.
+Hence this project.
+
+** Features
+
+Docker compose files don't support features that *compoje* tries to solve:
+
+*** Docker configs and Docker secrets that change
+
+Secrets and configs in Docker are immutable.
+This makes change management tricky.
+*compoje* solves this issue by creating configs and secrets names
+that include the content hash in the name.
+
+When you change the file contents the hash will change.
+This causes a new config/secret to be added and used in the service.
+
+Periodically, you will have to clean unused configs/secrets.
+
+*** Template values in stack defintions
+
+Docker supports interpolation from environment variables.
+This is nice but sometimes not the best option.
+
+*compoje* allows you to use values loaded from files, cli args or other providers.
+
+
+** TODOs
+
+Things that need to be done:
+
+*** TODO Implement basic functionality
+- [ ] Implement render
+- [ ] Implement deploy ?!
+
+*** TODO Implement cli interface
+- [ ] Implement cli values
+
+*** TODO Implement value / file provider interface
+- [ ] Implement vault secrets provider
+
+*** TODO Install / run via bbin ?!

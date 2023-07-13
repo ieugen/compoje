@@ -1,0 +1,17 @@
+;; NOTE: :tasks is an experimental feature in bb, still under development
+;; Type bb tasks to see all tasks
+;; Type bb <task-name> or bb run <task-name> to run a task
+{:min-bb-version "1.0.0"
+ :deps {compoje/compoje {:local/root "."}}
+ :tasks {:requires ([compoje.core :as c]
+                    [compoje.cli :as cli])
+         :leave (let [{:keys [:private :name]}
+                      (current-task)]
+                  (when-not private
+                    (binding [*out* *err*]
+                      (println "✓" name))))
+         ;; Helpers
+         compoje {:doc "Run compoje."
+                  :task (apply cli/main *command-line-args*)}
+         deploy-nginx {:doc "Render and deploy infra stack."
+                       :task (c/render-tpl "data/stacks/nginx" {})}}}

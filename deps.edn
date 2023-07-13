@@ -1,0 +1,7 @@
+{:paths ["src"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.clojure/tools.cli {:mvn/version "1.0.219"}
+        org.clojure/tools.logging {:mvn/version "1.2.4"}
+        com.taoensso/timbre {:mvn/version "6.2.1"}
+        selmer/selmer {:mvn/version "1.12.59"}
+        babashka/fs {:mvn/version "0.4.19"}}}
