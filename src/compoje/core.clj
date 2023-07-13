@@ -1,11 +1,11 @@
 (ns compoje.core
-  (:require [clojure.string :as str]
-            [clojure.tools.cli :as cli]
+  (:require [babashka.fs :as fs]
+            [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [clojure.walk :refer [keywordize-keys]]
-            [babashka.fs :as fs]
-            [selmer.util :refer [without-escaping]]
-            [selmer.parser :refer [render add-tag!]]
-            [selmer.filters :refer [add-filter!]]))
+            [selmer.filters :refer [add-filter!]]
+            [selmer.parser :as parser]
+            [selmer.util :refer [without-escaping]]))
 
 (defn hash-string
   "Hash a string using the provided hash algorithm (MD5, SHA1, etc)."
@@ -48,16 +48,15 @@
 
 (defn file-path
   [args context-map]
-  (println "file-path" args "->" context-map)
-  (let [{:keys [cwd]} context-map
+  (log/trace "file-path" args "->" context-map)
+  (let [{:keys [template-dir]} context-map
         fname (first args)
         fname (strip-quotes fname)]
-    (str (fs/file cwd fname)))
-  #_(str "file-path>>" (first args)))
+    (str (fs/absolutize (fs/file template-dir fname)))))
 
 (defn file-hash
   [args context-map]
-  (println "file-hash" args "->" context-map)
+  (log/trace "file-hash" args "->" context-map)
   (let [fname (first args)
         fname (strip-quotes fname)
         {:keys [template-dir]} context-map
@@ -65,11 +64,10 @@
               fs/absolutize
               fs/file)
         hash (hash-file f "md5")]
-    (subs hash 0 6))
-  #_(str "file-hash>>" (first args)))
+    (subs hash 0 6)))
 
-(add-tag! :file-path file-path)
-(add-tag! :file-hash file-hash)
+(parser/add-tag! :file-path file-path)
+(parser/add-tag! :file-hash file-hash)
 
 (defn deep-merge
   "From https://clojuredocs.org/clojure.core/merge ."
@@ -81,7 +79,7 @@
 (defn load-values
   "Load values to use in template file."
   [dir]
-  (println "Load values from" dir)
+  (log/debug "Load values from" (str dir))
   #_(apply deep-merge (map keywordize-keys (map cc/fetch-resource values)))
   {})
 
@@ -90,44 +88,51 @@
           :or {template-name "stack.tpl.yml"}}]
   (let [f (fs/file dir template-name)
         f (fs/file (fs/absolutize f))]
-    (println "Load template from" f)
+    (log/debug "Load template from" (str f))
     (slurp f)))
 
-(defn render-tpl
-  [dir {:keys [output
-               render-opts]
-        :or {render-opts {:tag-open \< :tag-close \>}
-             output "stack.generated.yml"}
-        :as arg-map}]
-  (let [cwd (System/getProperty "user.dir")
-        context {:values (load-values dir)
-                 :cwd cwd
-                 :template-dir dir}
-        tpl (load-template dir)
-        out (fs/file cwd output)
+(defn load-context
+  "Builds context as a map of values and returns it.
+   Merges in values from cli to replace values from files."
+  ([dir]
+   (load-context dir {}))
+  ([dir cli-values]
+   ;; TODO: merge cli values
+   (let [cwd (System/getProperty "user.dir")]
+     {:values (load-values dir)
+      :cwd cwd
+      :template-dir dir
+      :output "stack.generated.yml"})))
+
+(defn render
+  "Render a stack template.
+   Template can access values in context map.
+   Result is returned as a string."
+  [dir context {:keys [render-opts]
+                :or {render-opts {:tag-open \< :tag-close \>}}
+                :as opts}]
+  (let [tpl (load-template dir)
         result (without-escaping
-                (render tpl context render-opts))]
-    (println arg-map)
-    (println out)
-    (if (str/blank? output)
-      (do
-        ;; (log "Write result to stdout.")
-        (println result))
-      (do
-        (println "Write result to'" out "'file")
-        (spit out result)))))
+                (parser/render tpl context render-opts))]
+    result))
+
+(defn render->file
+  "Render a stack template to a file.
+   Template can access values in context map."
+  [dir context file opts]
+  (let [tpl (render dir context opts)]
+    (log/debug "Writing template to" file)
+    (spit file tpl)))
 
 (comment
 
   (without-escaping
-   (render "{{x}}" {:x "I <3 NY"}))
+   (parser/render "{{x}}" {:x "I <3 NY"}))
 
   (file-hash ["/home/ieugen/proiecte/clojure/compoje/data/stacks/nginx/stack.tpl.yml" "md5"] {})
 
-  (render "{% file-hash quux %} {% foo baz %}" {} )
+  (parser/render "{% file-hash quux %} {% foo baz %}" {})
 
-  (render "{%  quux %} {% foo baz %}" {})
-
-
+  (parser/render "{%  quux %} {% foo baz %}" {})
 
   )
