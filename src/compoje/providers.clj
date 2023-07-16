@@ -8,7 +8,7 @@
   "Register a provider with a given key.
    Prefer to use namespaced clojure keywords like: :compoje.providers/vault ."
   [key provider]
-  (log/info "Register provider" key "->" provider)
+  (log/debug "Register provider" key "->" provider)
   (swap! provider-registry assoc key provider))
 
 (defn registered-providers

@@ -28,6 +28,8 @@
    [nil "--resolve-image STRATEGY"
     "Query the registry to resolve image digest and supported platforms (always, changed, never)"
     :default "always"]
+   ["-r" "--render-only" "Render stack as file, do not deploy."
+    :default false]
    ;; --context is global option for docker
    [nil "--context CONTEXT" "Use this docker context.
                          See https://docs.docker.com/engine/context/working-with-contexts/"]
@@ -45,7 +47,7 @@
          options-summary
          ""
          "Actions:"
-         "  render     Render a stack template."
+        ;;  "  render     Render a stack template."
          "  deploy     Deploy a stack template to a swarm cluster."
          ""
          "Please refer to the manual page for more information."]
@@ -59,7 +61,7 @@
          global-options
          ""
          "Actions:"
-         "  render     Render a stack template."
+        ;;  "  render     Render a stack template."
          "  deploy     Deploy a stack template to a swarm cluster."
          ""
          (str action " options")
@@ -161,12 +163,12 @@
     (log/merge-config! {:output-fn clog/output-fn
                         :min-level (verbosity->log-level verbosity)})
     (register-default-providers!)
-    (log/info "Providers are" (providers/registered-providers))
+    (log/debug "Providers are" (providers/registered-providers))
     ;; execute commands
     (if exit-message
       (exit (if ok? 0 1) exit-message)
       (case action
-        "render"
-        (render parsed)
+        ;; "render"
+        ;; (render parsed)
         "deploy"
         (deploy parsed)))))
