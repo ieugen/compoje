@@ -3,7 +3,10 @@
   (:require [clojure.string :as str]
             [clojure.tools.cli :as cli]
             [compoje.logging :as clog]
-            [compoje.core :as core]
+            [compoje.render :as core]
+            [compoje.context :as context]
+            [compoje.providers :as providers :refer [provider-name run]]
+            [compoje.providers.vault :as vault-p]
             [compoje.deploy.docker :as docker]
             [taoensso.timbre :as log]
             [babashka.fs :as fs])
@@ -62,8 +65,7 @@
          (str action " options")
          options-summary
          "Please refer to the manual page for more information."]
-        (str/join \newline)))
-  )
+        (str/join \newline))))
 
 (defn error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"
@@ -134,13 +136,18 @@
         global-summary (:summary global-parsed)
         parsed (validate-deploy args global-summary)
         {:keys [template-dir stack options arguments]} parsed
-        context (core/load-context template-dir)
+        context (context/load-context! template-dir)
         file (str (fs/absolutize (fs/path template-dir "stack.generated.yml")))]
     (log/debug "Deploy" template-dir "as" stack
                "opts" options
                "arguments" arguments)
     (core/render->file template-dir context file {})
     (docker/deploy file stack {})))
+
+(defn register-default-providers!
+  []
+  (let [vault (vault-p/->VaultSecretsProvider)]
+    (providers/register-provider! (provider-name vault) vault)))
 
 (defn main
   "Default entry point for CLI app."
@@ -153,6 +160,8 @@
     ;; Make logging cli friendly
     (log/merge-config! {:output-fn clog/output-fn
                         :min-level (verbosity->log-level verbosity)})
+    (register-default-providers!)
+    (log/info "Providers are" (providers/registered-providers))
     ;; execute commands
     (if exit-message
       (exit (if ok? 0 1) exit-message)

@@ -3,8 +3,7 @@
 ;; Type bb <task-name> or bb run <task-name> to run a task
 {:min-bb-version "1.0.0"
  :deps {compoje/compoje {:local/root "."}}
- :tasks {:requires ([compoje.core :as c]
-                    [compoje.cli :as cli])
+ :tasks {:requires ([compoje.cli :as cli])
          :leave (let [{:keys [:private :name]}
                       (current-task)]
                   (when-not private
@@ -12,6 +11,4 @@
                       (println "✓" name))))
          ;; Helpers
          compoje {:doc "Run compoje."
-                  :task (apply cli/main *command-line-args*)}
-         deploy-nginx {:doc "Render and deploy infra stack."
-                       :task (c/render-tpl "data/stacks/nginx" {})}}}
+                  :task (apply cli/main *command-line-args*)}}}

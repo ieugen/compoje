@@ -1,7 +1,8 @@
-(ns compoje.core
+(ns compoje.render
   (:require [babashka.fs :as fs]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
+            [compoje.context :as context]
             [clojure.walk :refer [keywordize-keys]]
             [selmer.filters :refer [add-filter!]]
             [selmer.parser :as parser]
@@ -69,20 +70,6 @@
 (parser/add-tag! :file-path file-path)
 (parser/add-tag! :file-hash file-hash)
 
-(defn deep-merge
-  "From https://clojuredocs.org/clojure.core/merge ."
-  [a & maps]
-  (if (map? a)
-    (apply merge-with deep-merge a maps)
-    (apply merge-with deep-merge maps)))
-
-(defn load-values
-  "Load values to use in template file."
-  [dir]
-  (log/debug "Load values from" (str dir))
-  #_(apply deep-merge (map keywordize-keys (map cc/fetch-resource values)))
-  {})
-
 (defn load-template
   [dir & {:keys [template-name]
           :or {template-name "stack.tpl.yml"}}]
@@ -90,19 +77,6 @@
         f (fs/file (fs/absolutize f))]
     (log/debug "Load template from" (str f))
     (slurp f)))
-
-(defn load-context
-  "Builds context as a map of values and returns it.
-   Merges in values from cli to replace values from files."
-  ([dir]
-   (load-context dir {}))
-  ([dir cli-values]
-   ;; TODO: merge cli values
-   (let [cwd (System/getProperty "user.dir")]
-     {:values (load-values dir)
-      :cwd cwd
-      :template-dir dir
-      :output "stack.generated.yml"})))
 
 (defn render
   "Render a stack template.
