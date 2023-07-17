@@ -4,6 +4,7 @@
             [clojure.tools.cli :as cli]
             [compoje.logging :as clog]
             [compoje.render :as core]
+            [compoje.config :as config]
             [compoje.context :as context]
             [compoje.providers :as providers :refer [provider-name run]]
             [compoje.providers.vault :as vault-p]
@@ -24,15 +25,15 @@
 (def deploy-opts
   "Deploy specific opts.
    Includes options to be passed down to docker client."
-  [[nil "--prune" "Prune services that are no longer referenced"]
+  [[nil "--prune" "Prune services that are no longer referenced."]
    [nil "--resolve-image STRATEGY"
     "Query the registry to resolve image digest and supported platforms (always, changed, never)"
     :default "always"]
-   ["-r" "--render-only" "Render stack as file, do not deploy."
+   [nil "--dry-run" "Dry run. Render stack. Do not deploy."
     :default false]
    ;; --context is global option for docker
-   [nil "--context CONTEXT" "Use this docker context.
-                         See https://docs.docker.com/engine/context/working-with-contexts/"]
+   [nil "--context CONTEXT"
+    "Use this docker context. See https://docs.docker.com/engine/context/working-with-contexts/"]
    ["-h" "--help"]])
 
 (def valid-actions #{"render" "deploy"})
@@ -74,9 +75,11 @@
        (str/join \newline errors)))
 
 (defn validate-args
-  "Validate command line arguments. Either return a map indicating the program
-  should exit (with an error message, and optional ok status), or a map
-  indicating the action the program should take and the options provided."
+  "Validate command line arguments.
+   Either return a map indicating the program should exit
+   (with an error message, and optional ok status),
+   or a map indicating the action the program should take
+   and the options provided."
   [args]
   (let [parsed (cli/parse-opts args main-opts :in-order true)
         {:keys [options arguments errors summary]} parsed
@@ -107,10 +110,6 @@
     1 :debug
     :trace))
 
-(defn render
-  [args]
-  (log/info "Render" args))
-
 (defn validate-deploy
   [args global-summary]
   (let [parsed (cli/parse-opts args deploy-opts :in-order true)
@@ -132,43 +131,74 @@
              :template-dir dir
              :stack stack))))
 
-(defn deploy
-  [global-parsed]
-  (let [args (:arguments global-parsed)
+(defn parse-all-opts
+  "Parse cli options in two stages:
+   - global options
+   - action specific options
+
+   Return a map with all data with the followinf structure:
+   TODO: add structure once stable."
+  [args]
+  (let [{:keys [action arguments]
+         :as global-parsed} (validate-args args)
+        arguments (into [] (rest arguments))
+        global-parsed (assoc global-parsed :arguments arguments)
+        cmd-args (:arguments global-parsed)
         global-summary (:summary global-parsed)
-        parsed (validate-deploy args global-summary)
-        {:keys [template-dir stack options arguments]} parsed
-        context (context/load-context! template-dir)
+        parsed-cmd (case action
+                     "deploy" (validate-deploy cmd-args global-summary)
+                     ;; else action-opts are nil
+                     nil)]
+    {:action action
+     :global-opts global-parsed
+     :action-opts parsed-cmd}))
+
+(defn register-default-providers!
+  "Register providers available for calling."
+  []
+  (providers/register-provider! (vault-p/->VaultSecretsProvider)))
+
+(defn- set-hooman-logging!
+  "Make log format friendly to hoomans."
+  [verbosity]
+  (log/merge-config! {:output-fn clog/output-fn
+                      :min-level (verbosity->log-level verbosity)}))
+
+(defn deploy
+  [parsed]
+  (let [{:keys [template-dir stack options arguments]} parsed
+        {:keys [dry-run]} options
+        config-path (config/config-path template-dir)
+        config (config/load-config! config-path)
+        context (context/load-context! template-dir config)
+        _provider-results (providers/provide-secrets (assoc config :template-dir template-dir))
+        contents (core/render template-dir context {})
         file (str (fs/absolutize (fs/path template-dir "stack.generated.yml")))]
     (log/debug "Deploy" template-dir "as" stack
                "opts" options
                "arguments" arguments)
-    (core/render->file template-dir context file {})
-    (docker/deploy file stack {})))
-
-(defn register-default-providers!
-  []
-  (let [vault (vault-p/->VaultSecretsProvider)]
-    (providers/register-provider! (provider-name vault) vault)))
+    (if dry-run
+      (do
+        (log/debug "Skip deployment. Render only.")
+        (log/info contents))
+      (do
+        (spit file contents)
+        (docker/deploy file stack {})))))
 
 (defn main
   "Default entry point for CLI app."
   [& args]
-  (let [{:keys [action options exit-message ok? arguments]
-         :as parsed} (validate-args args)
-        {:keys [verbosity]} options
-        arguments (into [] (rest arguments))
-        parsed (assoc parsed :arguments arguments)]
-    ;; Make logging cli friendly
-    (log/merge-config! {:output-fn clog/output-fn
-                        :min-level (verbosity->log-level verbosity)})
+  (let [parsed (parse-all-opts args)
+        {:keys [action global-opts action-opts]} parsed
+        {:keys [options exit-message ok?]} global-opts
+        {:keys [verbosity]} options]
+    (set-hooman-logging! verbosity)
+    (log/trace "Parsed command line is" parsed)
     (register-default-providers!)
     (log/debug "Providers are" (providers/registered-providers))
     ;; execute commands
     (if exit-message
       (exit (if ok? 0 1) exit-message)
       (case action
-        ;; "render"
-        ;; (render parsed)
         "deploy"
-        (deploy parsed)))))
+        (deploy action-opts)))))

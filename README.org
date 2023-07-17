@@ -32,13 +32,11 @@ This is nice but sometimes not the best option.
 Things that need to be done:
 
 *** TODO Implement basic functionality
-- [ ] Implement render
-- [ ] Implement deploy ?!
-
-*** TODO Implement cli interface
-- [ ] Implement cli values
-
-*** TODO Implement value / file provider interface
-- [ ] Implement vault secrets provider
-
-*** TODO Install / run via bbin ?!
+- [x] Implement render /dry run
+- [x] Implement deploy ?!
+- [ ] Implement passing values via cli
+- [x] Implement vault secrets provider
+- [ ] Install / run via bbin ?!
+- [ ] Validate configuration, cli args? using spec / malli
+- [ ] Implement docker driver via contajners - avoid needing docker client
+- [ ] Write some documentation and examples - once features are stable

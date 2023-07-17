@@ -1,7 +1,6 @@
 (ns compoje.context
   "Functions to manage context"
-  (:require [compoje.config :as config]
-            [clojure.tools.logging :as log]))
+  (:require [clojure.tools.logging :as log]))
 
 (defn deep-merge
   "From https://clojuredocs.org/clojure.core/merge ."
@@ -22,20 +21,19 @@
    Merges in values from cli to replace values from files.
 
    Return a map."
-  [template-dir]
-  (let [config-path (config/config-path template-dir)
-        config (config/load-config! config-path)
-        cwd (System/getProperty "user.dir")]
+  [template-dir config]
+  (let [cwd (System/getProperty "user.dir")
+        values (load-values template-dir)]
     {:config config
-     :values (load-values template-dir)
-     :cwd cwd
+     :values values
+     :work-dir cwd
      :template-dir template-dir
      :output "stack.generated.yml"}))
 
 
 (comment
 
-  (load-context! "data/stacks/nginx")
+  (load-context! "data/stacks/nginx" {})
 
   )
 
