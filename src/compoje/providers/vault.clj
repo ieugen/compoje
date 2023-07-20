@@ -1,5 +1,6 @@
 (ns compoje.providers.vault
   (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
             [compoje.providers :as providers]
             [clojure.tools.logging :as log]
             [vault.client.http]
@@ -90,13 +91,15 @@
   ([secret-spec]
    (secret->file! (System/getProperty "user.dir") secret-spec))
   ([base-dir secret-spec]
-   (let [{:keys [local-path content spit-key]} secret-spec
+   (let [{:keys [local-path content spit-key as-edn]} secret-spec
          path (-> (fs/file base-dir local-path)
                   (fs/absolutize)
                   (fs/file))
          content (if (nil? spit-key)
                      ;; pretty print only edn maps
-                   (pprint-str content)
+                   (if as-edn
+                     (pprint-str content)
+                     (json/generate-string content))
                    (get content spit-key))]
      (log/trace "Write secret to" (str path))
      (fs/create-dirs (fs/parent path))
