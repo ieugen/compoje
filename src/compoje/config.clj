@@ -1,5 +1,6 @@
 (ns compoje.config
   (:require [aero.core :refer [read-config]]
+            [clojure.tools.logging :as log]
             [babashka.fs :as fs]))
 
 (def ^:dynamic compoje-config-name "compoje.edn")
@@ -13,9 +14,15 @@
 
 (defn load-config!
   "Read configuration from a path.
-   Returns a clojure data structure."
+   Returns a clojure map."
   [path]
-  (read-config path))
+  (try
+    (read-config path)
+    (catch java.io.FileNotFoundException e
+      (log/debug "File not found" (str path))
+      (log/trace "Exception" e)
+      ;; Use nil when configuration is missing
+      nil)))
 
 (comment
 

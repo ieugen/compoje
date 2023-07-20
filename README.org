@@ -26,6 +26,9 @@ This is nice but sometimes not the best option.
 
 *compoje* allows you to use values loaded from files, cli args or other providers.
 
+** Installation and running
+
+
 
 ** TODOs
 
@@ -37,6 +40,7 @@ Things that need to be done:
 - [ ] Implement passing values via cli
 - [x] Implement vault secrets provider
 - [ ] Install / run via bbin ?!
+- [ ] Instruction on how to install and run via bb, clojure, clojure tools
 - [ ] Validate configuration, cli args? using spec / malli
 - [ ] Implement docker driver via contajners - avoid needing docker client
 - [ ] Write some documentation and examples - once features are stable

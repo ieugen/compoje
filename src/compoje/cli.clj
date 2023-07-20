@@ -56,7 +56,7 @@
   ([action global-options options-summary]
    (->> ["This is compoje program. Templates for docker swarm stacks."
          ""
-         (str "Usage: compoje [options] " action " [" action "-options]")
+         (str "Usage: compoje [options] " action " [" action "-options] path-to-stack stack-name")
          ""
          "Options:"
          global-options
@@ -183,7 +183,7 @@
         (log/info contents))
       (do
         (spit file contents)
-        (docker/deploy file stack {})))))
+        (docker/deploy file stack options)))))
 
 (defn main
   "Default entry point for CLI app."
