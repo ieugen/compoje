@@ -41,18 +41,20 @@
   "Call secrets providers"
   [config]
   (let [{:keys [template-dir providers secrets]} config
-        by-name (set/index (into #{} providers) [:name])]
+        by-name (set/index (into #{} providers) [:name])
+        results (atom {})]
     (log/debug "We have providers" by-name)
     (doseq [secret secrets]
       (log/trace "Processing secret" secret)
       (let [name (:provider secret)
             provider-cfg (first (get by-name {:name name}))
             type (:type provider-cfg)
-            provider (get-provider type)]
-        (run provider {:config provider-cfg
-                       :secret-spec secret
-                       :template-dir template-dir})))))
-
+            provider (get-provider type)
+            result (run provider {:config provider-cfg
+                                  :secret-spec secret
+                                  :template-dir template-dir})]
+        (swap! results assoc name result)))
+    @results))
 
 (comment
 

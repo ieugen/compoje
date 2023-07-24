@@ -6,7 +6,7 @@
             [vault.client.http]
             [vault.core :as vault]
             [vault.secrets.kvv2 :as kv2]
-            [clojure.pprint :as pp]))
+            [compoje.utils :as u]))
 
 (defn token-path
   "Return the ^File to the vault token file.
@@ -77,13 +77,6 @@
         content (kv2/read-secret client mount-path secret-path opts)]
     (assoc secret-spec :content content)))
 
-(defn pprint-str
-  "Pretty print to string"
-  [content]
-  (let [out (java.io.StringWriter.)]
-    (pp/pprint content out)
-    (.toString out)))
-
 
 (defn secret->file!
   "Write a secret spec to file.
@@ -91,19 +84,25 @@
   ([secret-spec]
    (secret->file! (System/getProperty "user.dir") secret-spec))
   ([base-dir secret-spec]
-   (let [{:keys [local-path content spit-key as-edn]} secret-spec
-         path (-> (fs/file base-dir local-path)
-                  (fs/absolutize)
-                  (fs/file))
-         content (if (nil? spit-key)
-                     ;; pretty print only edn maps
-                   (if as-edn
-                     (pprint-str content)
-                     (json/generate-string content))
-                   (get content spit-key))]
-     (log/trace "Write secret to" (str path))
-     (fs/create-dirs (fs/parent path))
-     (spit path content))))
+   (let [{:keys [local-path content spit-key as-edn]} secret-spec]
+     ;; TODO: Also during dry-run, avoid writing secrets as files, just log ?!
+     ;; TODO: Compute hash for secret to avoid needing a file on disk for hash
+     (if local-path
+       (let [path (-> (fs/file base-dir local-path)
+                      (fs/absolutize)
+                      (fs/file))
+             path-str (str path)
+             content (if (nil? spit-key)
+                       ;; pretty print only edn maps
+                       (if as-edn
+                         (u/pprint-str content)
+                         (json/generate-string content))
+                       (get content spit-key))]
+         (fs/create-dirs (fs/parent path))
+         (log/trace "Write secret to" path-str)
+         (spit path content))
+       (log/trace "Skip writing secret. Missing :local-path option."))
+     content)))
 
 (defrecord VaultSecretsProvider []
   providers/SecretsProvider

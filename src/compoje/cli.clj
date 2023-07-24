@@ -9,6 +9,7 @@
             [compoje.providers :as providers :refer [provider-name run]]
             [compoje.providers.vault :as vault-p]
             [compoje.deploy.docker :as docker]
+            [compoje.utils :as u]
             [taoensso.timbre :as log]
             [babashka.fs :as fs])
 
@@ -171,7 +172,8 @@
         config-path (config/config-path template-dir)
         config (config/load-config! config-path)
         context (context/load-context! template-dir config)
-        _provider-results (providers/provide-secrets (assoc config :template-dir template-dir))
+        provider-results (providers/provide-secrets (assoc config :template-dir template-dir))
+        context (assoc context :secrets provider-results)
         contents (core/render template-dir context {})
         file (str (fs/absolutize (fs/path template-dir "stack.generated.yml")))]
     (log/debug "Deploy" template-dir "as" stack
@@ -180,6 +182,7 @@
     (if dry-run
       (do
         (log/debug "Skip deployment. Render only.")
+        (log/info (u/pprint-str context) "\n\n")
         (log/info contents))
       (do
         (spit file contents)

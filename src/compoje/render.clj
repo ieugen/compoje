@@ -47,6 +47,30 @@
   (map strip-quotes ["" "\"" "a" "\" a \"" "'a'"])
   )
 
+(defn kwd-key
+  "Convert [\"a.c.d\" \"b\"] to [(:a :c :d) \"b\"].
+   Splits key by dot (.) and converts to keywords."
+  [kv]
+  [(map keyword (str/split (first kv) #"\."))
+   (second kv)])
+
+(defn deep-merge
+  "From https://clojuredocs.org/clojure.core/merge ."
+  [a & maps]
+  (if (map? a)
+    (apply merge-with deep-merge a maps)
+    (apply merge-with deep-merge maps)))
+
+(defn set-args->map
+  "Convert vector of k.e.y=value entries to a map with all values merged."
+  [set-args]
+  (if-not (empty? set-args)
+    (let [keys+vals (map #(str/split % #"=" 2) set-args)
+          kwd-keys (map kwd-key keys+vals)
+          maps (map #(assoc-in {} (first %) (second %)) kwd-keys)]
+      (apply deep-merge maps))
+    {}))
+
 (defn file-path
   [args context-map]
   (log/trace "file-path" args "->" context-map)
@@ -89,14 +113,6 @@
         result (without-escaping
                 (parser/render tpl context render-opts))]
     result))
-
-(defn render->file
-  "Render a stack template to a file.
-   Template can access values in context map."
-  [dir context file opts]
-  (let [tpl (render dir context opts)]
-    (log/debug "Writing template to" file)
-    (spit file tpl)))
 
 (comment
 
