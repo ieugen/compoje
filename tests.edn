@@ -1,0 +1,9 @@
+#kaocha/v1
+{:tests [{:id         :unit
+          :test-paths ["test/unit"]}
+         {:id         :providers
+          :test-paths ["test/providers"]}]
+ :reporter [kaocha.report/documentation
+            kaocha.report/tap]
+ :plugins [:kaocha.plugin/profiling
+           :kaocha.plugin/capture-output]}
