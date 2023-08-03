@@ -77,7 +77,6 @@
         content (kv2/read-secret client mount-path secret-path opts)]
     (assoc secret-spec :content content)))
 
-
 (defn secret->file!
   "Write a secret spec to file.
    It can spit whole contents to file or just a single key."
@@ -114,12 +113,11 @@
       (secret->file! template-dir secret)))
   (provider-name [_this] ::vault))
 
-
 (comment
 
   ::vault
 
-  (def client (vault/new-client "https://vault.do.drevidence.com:8200") )
+  (def client (vault/new-client "https://vault.do.drevidence.com:8200"))
 
   (vault/authenticate! client :token (load-token!))
 
@@ -128,6 +126,4 @@
   (try
     (kv2/list-secrets client "DocSearch" "/")
     (catch Exception e
-      (println e)))
-
-  )
+      (println e))))

@@ -30,10 +30,7 @@
      :template-dir template-dir
      :output "stack.generated.yml"}))
 
-
 (comment
 
-  (load-context! "data/stacks/nginx" {})
-
-  )
+  (load-context! "data/stacks/nginx" {}))
 

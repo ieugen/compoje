@@ -44,8 +44,7 @@
     s))
 
 (comment
-  (map strip-quotes ["" "\"" "a" "\" a \"" "'a'"])
-  )
+  (map strip-quotes ["" "\"" "a" "\" a \"" "'a'"]))
 
 (defn kwd-key
   "Convert [\"a.c.d\" \"b\"] to [(:a :c :d) \"b\"].
@@ -123,6 +122,4 @@
 
   (parser/render "{% file-hash quux %} {% foo baz %}" {})
 
-  (parser/render "{%  quux %} {% foo baz %}" {})
-
-  )
+  (parser/render "{%  quux %} {% foo baz %}" {}))

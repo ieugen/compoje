@@ -26,6 +26,4 @@
 
 (comment
 
-  (read-config "data/stacks/nginx/compoje.edn")
-
-  )
+  (read-config "data/stacks/nginx/compoje.edn"))

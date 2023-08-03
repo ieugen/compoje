@@ -27,5 +27,4 @@
 
 (comment
   ;; use our clean log formatting fn
-  (taoensso.timbre/merge-config! {:output-fn output-fn})
-  )
+  (taoensso.timbre/merge-config! {:output-fn output-fn}))

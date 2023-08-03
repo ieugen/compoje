@@ -27,7 +27,6 @@
   []
   (keys @provider-types))
 
-
 (defn get-provider
   (^SecretsProvider [key]
    (let [providers @provider-types
@@ -64,8 +63,4 @@
                     :type :compoje.providers.vault/vault
                     :addr "VAULT_ADDR"}]
         by-name (set/index (into #{} providers) [:name])]
-    by-name)
-
-
-
-  )
+    by-name))

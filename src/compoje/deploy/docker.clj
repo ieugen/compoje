@@ -38,6 +38,4 @@
               {:context "dre-main"})
 
   (deploy "data/stack/nginx/stack.generated.yml" "bbb"
-          {:context "dre-main"})
-
-  )
+          {:context "dre-main"}))
