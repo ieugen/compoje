@@ -2,13 +2,11 @@
 ;; Type bb tasks to see all tasks
 ;; Type bb <task-name> or bb run <task-name> to run a task
 {:min-bb-version "1.0.0"
- :deps {compoje/compoje {:local/root "."}}
- :tasks {:requires ([compoje.cli :as cli])
-         :leave (let [{:keys [:private :name]}
-                      (current-task)]
-                  (when-not private
-                    (binding [*out* *err*]
-                      (println "✓" name))))
-         ;; Helpers
+ :deps {compoje/compoje {:local/root "."}
+        dev.weavejester/cljfmt {:mvn/version "0.11.2"}}
+ :tasks {:requires ([compoje.cli :as cli]
+                    [cljfmt.main :as fmt])
+         fmt {:doc "Format code using cljfmt"
+              :task (apply fmt/-main *command-line-args*)}
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}
