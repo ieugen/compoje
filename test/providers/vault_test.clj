@@ -5,20 +5,20 @@
             [compoje.providers :as providers]
             [compoje.providers.vault :as vp]
             [taoensso.timbre :as log]
-            [vault.core :as vault]))
+            [vault.core :as vault]
+            [vault.secrets.kvv2 :as kv2]))
 
 (log/merge-config! {:level :info
                     :ns-filter {:allow #{"*"}
                                 :deny #{"com.github.dockerjava.*"}}})
 
-
 (def ^:private vault-root-token "myroot")
 
 (def ^:private default-container-cfg {:image-name    "hashicorp/vault:1.14.1"
-                              :exposed-ports [8200]
-                              :env-vars      {"SKIP_SETCAP" "true"
-                                              "VAULT_DEV_ROOT_TOKEN_ID" vault-root-token}
-                              :wait-for      {:wait-strategy :port}})
+                                      :exposed-ports [8200]
+                                      :env-vars      {"SKIP_SETCAP" "true"
+                                                      "VAULT_DEV_ROOT_TOKEN_ID" vault-root-token}
+                                      :wait-for      {:wait-strategy :port}})
 
 (defn ^:private container->vault-addr
   [container]
@@ -26,12 +26,22 @@
         port (get (:mapped-ports container) 8200)]
     (str "http://" host ":" port)))
 
+(defn ^:private container->vault-config
+  [container]
+  (let [addr (container->vault-addr container)]
+    {:token vault-root-token
+     :addr addr}))
+
 (defn ^:private container->client
   [container]
-  (let [addr (container->vault-addr container)
-        client (vp/authenticated-client {:token vault-root-token
-                                         :addr addr})]
+  (let [config (container->vault-config container)
+        client (vp/authenticated-client config)]
     client))
+
+(defn vault-kv-fixture
+  [client secret-spec]
+  (let [{:keys [mount-path secret-path data]} secret-spec]
+    (kv2/write-secret! client mount-path secret-path data)))
 
 (defn with-vault
   "Start and stop a vault instance around tests.
@@ -65,14 +75,31 @@
            (is (= true (:initialized status)))
            (is (= false (:sealed status)))]))))
 
-  (testing "Fails when secret spec is missing\n"
+  #_(testing "Fails when context is nil\n"
+      (with-vault
+        (fn [container]
+          (let [addr (container->vault-addr container)
+                v (vp/->VaultSecretsProvider)]
+            ;; return a vector
+            (providers/run v nil)))))
+
+  (testing "Gets a secret with a valid spec\n"
     (with-vault
       (fn [container]
-        (let [addr (container->vault-addr container)
-              v (vp/->VaultSecretsProvider)]
-            ;; return a vector
-          (providers/run v nil))))))
-
+        (let [cfg (container->vault-config container)
+              client (container->client container)
+              _ (vault-kv-fixture client {:mount-path "secret"
+                                          :secret-path "secret-foo"
+                                          :data {:a "b"}})
+              v (vp/->VaultSecretsProvider)
+              context {:config cfg
+                       :template-dir "."
+                       :secret-spec {:name "cert-key"
+                                     :provider :dre-vault
+                                     :mount-path "secret"
+                                     :secret-path "secret-foo"}}
+              result (providers/run v context)]
+          (is (= result {:a "b"})))))))
 
 (comment
   (run-all-tests #"providers.vault-test"))

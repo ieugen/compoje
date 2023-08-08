@@ -45,8 +45,8 @@
     (log/debug "We have providers" by-name)
     (doseq [secret secrets]
       (log/trace "Processing secret" secret)
-      (let [name (:provider secret)
-            provider-cfg (first (get by-name {:name name}))
+      (let [{:keys [provider name]} secret
+            provider-cfg (first (get by-name {:name provider}))
             type (:type provider-cfg)
             provider (get-provider type)
             result (run provider {:config provider-cfg

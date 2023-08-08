@@ -1,12 +1,12 @@
 (ns compoje.providers.vault
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
-            [compoje.providers :as providers]
             [clojure.tools.logging :as log]
+            [compoje.providers :as providers]
+            [compoje.utils :as u]
             [vault.client.http]
             [vault.core :as vault]
-            [vault.secrets.kvv2 :as kv2]
-            [compoje.utils :as u]))
+            [vault.secrets.kvv2 :as kv2]))
 
 (defn token-path
   "Return the ^File to the vault token file.
