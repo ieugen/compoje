@@ -1,4 +1,4 @@
-(ns providers.vault-test
+(ns integration.vault-test
   (:require [clj-test-containers.core :as tc]
             [clojure.set :as set]
             [clojure.test :refer [deftest is run-all-tests testing]]

@@ -171,9 +171,9 @@
         {:keys [dry-run]} options
         config-path (config/config-path template-dir)
         config (config/load-config! config-path)
-        context (context/load-context! template-dir config)
-        provider-results (providers/provide-secrets (assoc config :template-dir template-dir))
-        context (assoc context :secrets provider-results)
+        provider-results (providers/provide-secrets
+                          (assoc config :template-dir template-dir))
+        context (context/load-context! template-dir config provider-results)
         contents (core/render template-dir context {})
         file (str (fs/absolutize (fs/path template-dir "stack.generated.yml")))]
     (log/debug "Deploy" template-dir "as" stack

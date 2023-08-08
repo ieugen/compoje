@@ -1,8 +1,8 @@
 #kaocha/v1
 {:tests [{:id         :unit
           :test-paths ["test/unit"]}
-         {:id         :providers
-          :test-paths ["test/providers"]}]
+         {:id         :integration
+          :test-paths ["test/integration"]}]
  :reporter [kaocha.report/documentation
             kaocha.report/tap]
  :plugins [:kaocha.plugin/profiling
