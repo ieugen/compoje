@@ -28,7 +28,7 @@
   (keys @provider-types))
 
 (defn get-provider
-  (^SecretsProvider [key]
+  ([key]
    (let [providers @provider-types
          provider (get providers key)]
      (when-not (some? provider)
