@@ -1,7 +1,6 @@
 (ns compoje.context
   "Functions to manage context"
-  (:require [clojure.tools.logging :as log]
-            [compoje.utils :as u]))
+  (:require [compoje.utils :as u]))
 
 (defn load-context!
   "Builds context as a map of values and returns it.

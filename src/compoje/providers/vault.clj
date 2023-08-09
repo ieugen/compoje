@@ -83,7 +83,7 @@
   ([secret-spec]
    (secret->file! (System/getProperty "user.dir") secret-spec))
   ([base-dir secret-spec]
-   (let [{:keys [local-path content spit-key as-edn]} secret-spec]
+   (let [{:keys [local-path content spit-key format]} secret-spec]
      ;; TODO: Also during dry-run, avoid writing secrets as files, just log ?!
      ;; TODO: Compute hash for secret to avoid needing a file on disk for hash
      (if local-path
@@ -93,9 +93,11 @@
              path-str (str path)
              content (if (nil? spit-key)
                        ;; pretty print only edn maps
-                       (if as-edn
-                         (u/pprint-str content)
-                         (json/generate-string content))
+                       ;; https://github.com/amperity/vault-clj/issues/100
+                       (case format
+                         "edn" (u/pprint-str content)
+                         "json" (json/generate-string content)
+                         content)
                        (get content spit-key))]
          (fs/create-dirs (fs/parent path))
          (log/trace "Write secret to" path-str)
