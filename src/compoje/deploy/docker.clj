@@ -5,37 +5,43 @@
 
 (defn deploy-str
   "Deploy stack"
-  ([template stack]
-   (deploy-str template stack nil))
-  ([template stack opts]
-   (log/trace "deploy-str" template "->" stack
-              "opts:" opts)
-   (let [{:keys [context resolve-image]} opts
-         cli (str "docker "
-                  (when context
-                    (str "--context " context))
-                  " stack deploy "
-                  (when resolve-image
-                    (str "--resolve-image " resolve-image))
-                  " --compose-file " template " " stack)]
-     cli)))
+  ([docker]
+   (let [{:keys [stack context resolve-image compose-file]} docker]
+     (log/trace "deploy-str" docker ":" compose-file "->" stack)
+     (let [cli (str "docker "
+                    (when context
+                      (str "--context " context))
+                    " stack deploy "
+                    (when resolve-image
+                      (str "--resolve-image " resolve-image))
+                    " --compose-file " compose-file " " stack)]
+       cli))))
 
 (defn deploy
   "TODO: Move deployment computation up to participate in dry-run"
-  ([template stack]
-   (deploy template stack nil))
-  ([template stack opts]
-   (let [cli (deploy-str template stack opts)
+  ([docker]
+   (deploy docker nil))
+  ([docker opts]
+   (let [cli (deploy-str docker)
          {:keys [dry-run]} opts]
      (log/info "Deploy using:" cli)
      (if dry-run
        (log/info "Dry-run:" cli)
-       (shell cli)))))
+       (try
+         (shell {:err :string} cli)
+         (catch Exception e
+           (let [{:keys [err cmd type]} (ex-data e)]
+             (when (= type :babashka.process/error)
+               (log/error "Exception deploying:" cmd)
+               (log/error "Error:" err)))
+           (System/exit -1)))))))
 
 (comment
 
-  (deploy-str "data/stack/nginx/stack.generated.yml" "bbb"
-              {:context "dre-main"})
+  (deploy-str {:context "dre-main"
+               :stack "bbb"
+               :compose-file "data/stack/nginx/stack.generated.yml"})
 
-  (deploy "data/stack/nginx/stack.generated.yml" "bbb"
-          {:context "dre-main"}))
+  (deploy {:context "dre-main"
+           :stack "bbb"
+           :compose-file "data/stack/nginx/stack.generated.yml"}))

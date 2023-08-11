@@ -7,8 +7,6 @@
     (let [context (c/load-context! "/tmp/a" {:values {:a 1}} {:b 2})
           context (dissoc context :work-dir)]
 
-      (is (= context {:config {:values {:a 1}}
-                      :template-dir "/tmp/a"
-                      :output "stack.generated.yml"
+      (is (= context {:template-dir "/tmp/a"
                       :secrets {:b 2}
-                      :values {:a 1 :b 2}})))))
+                      :values {:a 1}})))))

@@ -2,18 +2,17 @@
   "ns to offer a CLI interface for compoje features."
   (:require [clojure.string :as str]
             [clojure.tools.cli :as cli]
-            [compoje.logging :as clog]
-            [compoje.render :as core]
             [compoje.config :as config]
             [compoje.context :as context]
+            [compoje.deploy.docker :as docker]
+            [compoje.logging :as clog]
             [compoje.providers :as providers :refer [provider-name run]]
             [compoje.providers.vault :as vault-p]
-            [compoje.deploy.docker :as docker]
+            [compoje.render :as render]
             [compoje.utils :as u]
-            [taoensso.timbre :as log]
-            [babashka.fs :as fs])
-
+            [taoensso.timbre :as log])
   (:gen-class))
+
 (def main-opts
   [["-v" nil "Verbosity level"
     :id :verbosity
@@ -26,7 +25,9 @@
 (def deploy-opts
   "Deploy specific opts.
    Includes options to be passed down to docker client."
-  [[nil "--prune" "Prune services that are no longer referenced."]
+  [[nil "--stack STACK"
+    "Specify the name of the stack. Ovewrite value from file."]
+   [nil "--prune" "Prune services that are no longer referenced."]
    [nil "--resolve-image STRATEGY"
     "Query the registry to resolve image digest and supported platforms (always, changed, never)"
     :default "always"]
@@ -57,7 +58,7 @@
   ([action global-options options-summary]
    (->> ["This is compoje program. Templates for docker swarm stacks."
          ""
-         (str "Usage: compoje [options] " action " [" action "-options] path-to-stack stack-name")
+         (str "Usage: compoje [options] " action " [" action "-options] path-to-stack")
          ""
          "Options:"
          global-options
@@ -74,6 +75,13 @@
 (defn error-msg [errors]
   (str "The following errors occurred while parsing your command:\n\n"
        (str/join \newline errors)))
+
+(defn cli-opts->context
+  "Build context from global options.
+   Will be deep merged and overwrite values in "
+  [options]
+  (let [compoje (select-keys options [:deploy-driver])]
+    {:compoje compoje}))
 
 (defn validate-args
   "Validate command line arguments.
@@ -94,7 +102,8 @@
 
       (valid-actions action)
       (assoc parsed
-             :action action)
+             :action action
+             :context (cli-opts->context options))
 
       :else
       {:exit-message (usage summary)})))
@@ -111,12 +120,19 @@
     1 :debug
     :trace))
 
+(defn cli-deploy->context
+  "Build partial context from cli opts for deploy command.
+   This will be merged and overwrite context loaded from compoje."
+  [options]
+  (let [docker (select-keys options [:stack :prune :context
+                                     :resove-image])]
+    {:docker docker}))
+
 (defn validate-deploy
   [args global-summary]
   (let [parsed (cli/parse-opts args deploy-opts :in-order true)
         {:keys [options arguments errors summary]} parsed
-        dir (first arguments)
-        stack (second arguments)]
+        dir (first arguments)]
     (cond
       (:help options) ; help => exit OK with usage summary
       (exit 0 (usage "deploy" global-summary summary))
@@ -124,14 +140,11 @@
       errors
       (exit 1 (error-msg errors))
 
-      (not= 2 (count arguments))
-      (exit 1 (str "Deploy requires 2 arguments: directory and stack"))
+      (not= 1 (count arguments))
+      (exit 1 (str "Deploy requires 1 argument: directory to deploy"))
 
-      :else
-      (assoc parsed
-             :template-dir dir
-             :stack stack))))
-
+      :else (assoc parsed
+                   :template-dir dir))))
 (defn parse-all-opts
   "Parse cli options in two stages:
    - global options
@@ -140,7 +153,7 @@
    Return a map with all data with the followinf structure:
    TODO: add structure once stable."
   [args]
-  (let [{:keys [action arguments]
+  (let [{:keys [action arguments options]
          :as global-parsed} (validate-args args)
         arguments (into [] (rest arguments))
         global-parsed (assoc global-parsed :arguments arguments)
@@ -149,10 +162,13 @@
         parsed-cmd (case action
                      "deploy" (validate-deploy cmd-args global-summary)
                      ;; else action-opts are nil
-                     nil)]
+                     nil)
+        global-ctx (cli-opts->context options)
+        action-ctx (cli-deploy->context (:options parsed-cmd))]
     {:action action
      :global-opts global-parsed
-     :action-opts parsed-cmd}))
+     :action-opts parsed-cmd
+     :context (u/deep-merge global-ctx action-ctx)}))
 
 (defn register-default-providers!
   "Register providers available for calling."
@@ -166,18 +182,18 @@
                       :min-level (verbosity->log-level verbosity)}))
 
 (defn deploy
-  [parsed]
-  (let [{:keys [template-dir stack options arguments]} parsed
+  [parsed context]
+  (let [{:keys [template-dir options arguments]} parsed
         {:keys [dry-run]} options
         config-path (config/config-path template-dir)
         config (config/load-config! config-path)
         provider-results (providers/provide-secrets
                           (assoc config :template-dir template-dir))
-        context (context/load-context! template-dir config provider-results)
-        contents (core/render template-dir context {})
-        file (str (fs/absolutize (fs/path template-dir "stack.generated.yml")))]
-    (log/debug "Deploy" template-dir "as" stack
-               "opts" options
+        file-ctx (context/load-context! template-dir config provider-results)
+        context (context/final-context file-ctx context)
+        docker (:docker context)
+        contents (render/render template-dir context {})]
+    (log/debug "Deploy" template-dir "opts" options
                "arguments" arguments)
     (if dry-run
       (do
@@ -185,14 +201,14 @@
         (log/info (u/pprint-str context) "\n\n")
         (log/info contents))
       (do
-        (spit file contents)
-        (docker/deploy file stack options)))))
+        (spit (:compose-file docker) contents)
+        (docker/deploy docker options)))))
 
 (defn main
   "Default entry point for CLI app."
   [& args]
   (let [parsed (parse-all-opts args)
-        {:keys [action global-opts action-opts]} parsed
+        {:keys [action global-opts action-opts context]} parsed
         {:keys [options exit-message ok?]} global-opts
         {:keys [verbosity]} options]
     (set-hooman-logging! verbosity)
@@ -204,4 +220,4 @@
       (exit (if ok? 0 1) exit-message)
       (case action
         "deploy"
-        (deploy action-opts)))))
+        (deploy action-opts context)))))

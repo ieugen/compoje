@@ -42,7 +42,7 @@
   (let [{:keys [template-dir providers secrets]} config
         by-name (set/index (into #{} providers) [:name])
         results (atom {})]
-    (log/debug "We have providers" by-name)
+    (log/trace "We have providers" by-name)
     (doseq [secret secrets]
       (log/trace "Processing secret" secret)
       (let [{:keys [provider name]} secret

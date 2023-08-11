@@ -2,8 +2,6 @@
   (:require [babashka.fs :as fs]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
-            [compoje.context :as context]
-            [clojure.walk :refer [keywordize-keys]]
             [selmer.filters :refer [add-filter!]]
             [selmer.parser :as parser]
             [selmer.util :refer [without-escaping]]))
