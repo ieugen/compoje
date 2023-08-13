@@ -10,7 +10,8 @@
             [compoje.providers.vault :as vault-p]
             [compoje.render :as render]
             [compoje.utils :as u]
-            [taoensso.timbre :as log])
+            [taoensso.timbre :as log]
+            [babashka.fs :as fs])
   (:gen-class))
 
 (def main-opts
@@ -132,7 +133,7 @@
   [args global-summary]
   (let [parsed (cli/parse-opts args deploy-opts :in-order true)
         {:keys [options arguments errors summary]} parsed
-        dir (first arguments)]
+        config (first arguments)]
     (cond
       (:help options) ; help => exit OK with usage summary
       (exit 0 (usage "deploy" global-summary summary))
@@ -144,7 +145,7 @@
       (exit 1 (str "Deploy requires 1 argument: directory to deploy"))
 
       :else (assoc parsed
-                   :template-dir dir))))
+                   :config-file config))))
 (defn parse-all-opts
   "Parse cli options in two stages:
    - global options
@@ -183,18 +184,21 @@
 
 (defn deploy
   [parsed context]
-  (let [{:keys [template-dir options arguments]} parsed
+  (let [{:keys [config-file options arguments]} parsed
         {:keys [dry-run]} options
-        config-path (config/config-path template-dir)
-        config (config/load-config! config-path)
+        config-file (config/absolute-path config-file)
+        template-dir (config/config-name->template-dir config-file)
+        config (config/load-config! config-file)
         provider-results (providers/provide-secrets
                           (assoc config :template-dir template-dir))
         file-ctx (context/load-context! template-dir config provider-results)
         context (context/final-context file-ctx context)
         docker (:docker context)
-        contents (render/render template-dir context {})]
-    (log/debug "Deploy" template-dir "opts" options
+        template-file (str (fs/file template-dir "stack.tpl.yml"))
+        contents (render/render template-file context {})]
+    (log/debug "Deploy" config-file "opts" options
                "arguments" arguments)
+    (log/debug "Deploy context" context)
     (if dry-run
       (do
         (log/debug "Skip deployment. Render only.")

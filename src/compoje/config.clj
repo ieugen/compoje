@@ -3,14 +3,21 @@
             [clojure.tools.logging :as log]
             [babashka.fs :as fs]))
 
-(def ^:dynamic compoje-config-name "compoje.edn")
-
-(defn config-path
+(defn absolute-path
   "Build a path to the compoje configuration inside the template directory."
-  ([template-dir]
-   (-> (fs/file template-dir compoje-config-name)
+  ([config-file]
+   (-> (fs/file config-file)
        fs/absolutize
        fs/file)))
+
+(defn config-name->template-dir
+  "Takes a config file and returns the template directory."
+  ([config-file]
+   (let [f (-> (fs/file config-file)
+               fs/parent
+               str)]
+     (log/trace "Template dir" f)
+     f)))
 
 (defn load-config!
   "Read configuration from a path.

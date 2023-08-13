@@ -15,13 +15,15 @@
        (BigInteger. 1)
        (format "%032x")))
 
-(defn ^:private hash-file
+(defn hash-file
   "Hash a file name using the provided digest algorithm.
    Defaults to md5 if not specified."
-  [file-name digest]
-  (let [digest (or digest "md5")
-        contents (slurp file-name)]
-    (hash-string contents digest)))
+  ([file-name]
+   (hash-file file-name "md5"))
+  ([file-name digest]
+   (let [digest (or digest "md5")
+         contents (slurp file-name)]
+     (hash-string contents digest))))
 
 (add-filter! :hash-file hash-file)
 
@@ -92,24 +94,24 @@
 (parser/add-tag! :file-hash file-hash)
 
 (defn load-template
-  [dir & {:keys [template-name]
-          :or {template-name "stack.tpl.yml"}}]
-  (let [f (fs/file dir template-name)
-        f (fs/file (fs/absolutize f))]
-    (log/debug "Load template from" (str f))
-    (slurp f)))
+  ([template-file]
+   (let [f (fs/file (fs/absolutize template-file))]
+     (log/debug "Load template from" (str f))
+     (slurp f))))
 
 (defn render
   "Render a stack template.
    Template can access values in context map.
    Result is returned as a string."
-  [dir context {:keys [render-opts]
-                :or {render-opts {:tag-open \< :tag-close \>}}
-                :as opts}]
-  (let [tpl (load-template dir)
-        result (without-escaping
-                (parser/render tpl context render-opts))]
-    result))
+  ([template-file context]
+   (render template-file context nil))
+  ([template-file context {:keys [render-opts]
+                           :or {render-opts {:tag-open \< :tag-close \>}}
+                           :as opts}]
+   (let [tpl (load-template template-file)
+         result (without-escaping
+                 (parser/render tpl context render-opts))]
+     result)))
 
 (comment
 
