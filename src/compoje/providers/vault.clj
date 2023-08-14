@@ -109,10 +109,21 @@
   providers/SecretsProvider
   (run [_this context]
     (log/trace "Provide secrets for" context)
-    (let [{:keys [config secret-spec template-dir]} context
-          client (authenticated-client config)
-          secret (read-kvv2! client secret-spec)]
-      (secret->file! template-dir secret)))
+    (try
+      (let [{:keys [config secret-spec template-dir]} context
+            client (authenticated-client config)
+            secret (read-kvv2! client secret-spec)]
+        (secret->file! template-dir secret))
+      (catch Exception e
+        (let [{:keys [type error status]} (ex-data e)]
+          (if (= type :vault.client.api-util/api-error)
+            (do
+              (log/error "Exception reading secret: " error
+                         ". Status:" status)
+              (System/exit -1))
+            (do
+              (log/error "Exception reading secret" e)
+              (System/exit -1)))))))
   (provider-name [_this] ::vault))
 
 (comment
