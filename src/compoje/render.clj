@@ -46,29 +46,6 @@
 (comment
   (map strip-quotes ["" "\"" "a" "\" a \"" "'a'"]))
 
-(defn kwd-key
-  "Convert [\"a.c.d\" \"b\"] to [(:a :c :d) \"b\"].
-   Splits key by dot (.) and converts to keywords."
-  [kv]
-  [(map keyword (str/split (first kv) #"\."))
-   (second kv)])
-
-(defn deep-merge
-  "From https://clojuredocs.org/clojure.core/merge ."
-  [a & maps]
-  (if (map? a)
-    (apply merge-with deep-merge a maps)
-    (apply merge-with deep-merge maps)))
-
-(defn set-args->map
-  "Convert vector of k.e.y=value entries to a map with all values merged."
-  [set-args]
-  (if-not (empty? set-args)
-    (let [keys+vals (map #(str/split % #"=" 2) set-args)
-          kwd-keys (map kwd-key keys+vals)
-          maps (map #(assoc-in {} (first %) (second %)) kwd-keys)]
-      (apply deep-merge maps))
-    {}))
 
 (defn file-path
   [args context-map]

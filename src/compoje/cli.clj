@@ -34,6 +34,10 @@
     :default "always"]
    [nil "--dry-run" "Dry run. Render stack. Do not deploy."
     :default false]
+   ["-s" "--set VALUE" "Overwrite a context value using syntax: --set path.from.contex=value"
+    :multi true
+    :default []
+    :update-fn conj]
    ;; --context is global option for docker
    [nil "--context CONTEXT"
     "Use this docker context. See https://docs.docker.com/engine/context/working-with-contexts/"]
@@ -185,14 +189,15 @@
 (defn deploy
   [parsed context]
   (let [{:keys [config-file options arguments]} parsed
-        {:keys [dry-run]} options
+        {dry-run :dry-run set-args :set} options
         config-file (config/absolute-path config-file)
         template-dir (config/config-name->template-dir config-file)
         config (config/load-config! config-file)
         provider-results (providers/provide-secrets
                           (assoc config :template-dir template-dir))
         file-ctx (context/load-context! template-dir config provider-results)
-        context (context/final-context file-ctx context)
+        cli-ctx (context/set-args->map set-args)
+        context (context/final-context file-ctx context cli-ctx)
         docker (:docker context)
         template-file (str (fs/file template-dir "stack.tpl.yml"))
         contents (render/render template-file context {})]

@@ -37,7 +37,7 @@ Things that need to be done:
 *** TODO Implement basic functionality
 - [x] Implement render /dry run
 - [x] Implement deploy ?!
-- [ ] Implement passing values via cli
+- [x] Implement passing values via cli
 - [x] Implement vault secrets provider
 - [ ] Install / run via bbin ?!
 - [ ] Instruction on how to install and run via bb, clojure, clojure tools
