@@ -133,6 +133,7 @@
    This will be merged and overwrite context loaded from compoje."
   [options]
   (let [docker (select-keys options [:stack :prune :context
+                                     :with-registry-auth
                                      :resove-image])]
     {:docker docker}))
 
