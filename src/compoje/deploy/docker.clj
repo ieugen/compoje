@@ -6,12 +6,14 @@
 (defn deploy-str
   "Deploy stack"
   ([docker]
-   (let [{:keys [stack context resolve-image compose-file]} docker]
+   (let [{:keys [stack context resolve-image compose-file with-registry-auth]} docker]
      (log/trace "deploy-str" docker ":" compose-file "->" stack)
      (let [cli (str "docker "
                     (when context
                       (str "--context " context))
                     " stack deploy "
+                    (when with-registry-auth
+                      (str "--with-registry-auth "))
                     (when resolve-image
                       (str "--resolve-image " resolve-image))
                     " --compose-file " compose-file " " stack)]

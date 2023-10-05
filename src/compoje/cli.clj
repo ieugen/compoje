@@ -32,6 +32,9 @@
    [nil "--resolve-image STRATEGY"
     "Query the registry to resolve image digest and supported platforms (always, changed, never)"
     :default "always"]
+   [nil "--with-registry-auth"
+    "Send registry authentication details to Swarm agents"
+    :default true]
    [nil "--dry-run" "Dry run. Render stack. Do not deploy."
     :default false]
    ["-s" "--set VALUE" "Overwrite a context value using syntax: --set path.from.contex=value"
