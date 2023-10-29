@@ -96,6 +96,14 @@ In your *deps.edn* file you should add an alias used to call compoje in your pro
 
 - TODO: write example
 
+** Ideas
+
+- Try to implement/follow Compose specification.
+- Use yaml format since to appeal to a broader audience.
+- Read compoje configuration from the template file - under **x-compoje** key since compose will ignore keys that start with "x-".
+See https://docs.docker.com/compose/compose-file/11-extension/ .
+- Implement a file based secrets provider (compatible with ansible vault ?!) for people who don't use / need vault .
+
 ** TODOs
 
 Things that need to be done:
