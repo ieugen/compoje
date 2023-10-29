@@ -1,0 +1,21 @@
+docker:
+  stack: nginx
+providers: []
+  # - name: my-vault
+  #   type: compoje.providers.vault/vault
+  #   addr: "http://localhost:8200"
+secrets: []
+  # - name: cert-key
+  #   provider: my-vault
+  #   local-path: "nginx/cert.key"
+  #   spit-key: cert.key
+  #   mount-path: "secret"
+  #   secret-path: nginx
+  # - name: cert
+  #   provider: my-vault
+  #   local-path: "nginx/cert.key"
+  #   spit-key: cert.crt
+  #   mount-path: "secret"
+  #   secret-path: nginx
+values:
+  resource-reservations-mem: 128m

@@ -5,8 +5,8 @@
             [compoje.providers :as providers]
             [compoje.providers.vault :as vp]
             [taoensso.timbre :as log]
-            [vault.core :as vault]
-            [vault.secrets.kvv2 :as kv2]))
+            [vault.sys.health :as health]
+            [vault.secret.kv.v2 :as kv2]))
 
 (log/merge-config! {:level :info
                     :ns-filter {:allow #{"*"}
@@ -40,8 +40,9 @@
 
 (defn vault-kv-fixture
   [client secret-spec]
-  (let [{:keys [mount-path secret-path data]} secret-spec]
-    (kv2/write-secret! client mount-path secret-path data)))
+  (let [{:keys [mount-path secret-path data]} secret-spec
+        client (kv2/with-mount client mount-path)]
+    (kv2/write-secret! client secret-path data)))
 
 (defn with-vault
   "Start and stop a vault instance around tests.
@@ -68,8 +69,9 @@
     (with-vault
       (fn [container]
         (let [client (container->client container)
-              status (vault/status client)
+              status (health/read-health client nil)
               expected-keys #{:initialized :cluster-name :sealed :version}]
+          ;; (tap> status)
           ;; return a vector
           [(is (set/subset? expected-keys (into #{} (keys status))))
            (is (= true (:initialized status)))

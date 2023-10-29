@@ -1,12 +1,14 @@
 ;; NOTE: :tasks is an experimental feature in bb, still under development
 ;; Type bb tasks to see all tasks
 ;; Type bb <task-name> or bb run <task-name> to run a task
-{:min-bb-version "1.0.0"
+{:min-bb-version "1.3.183"
  :deps {compoje/compoje {:local/root "."}
         dev.weavejester/cljfmt {:mvn/version "0.11.2"}}
  :tasks {:requires ([compoje.cli :as cli]
                     [cljfmt.main :as fmt])
          fmt {:doc "Format code using cljfmt"
               :task (apply fmt/-main *command-line-args*)}
+         vault-dev {:doc "Start vault in dev mode for REPL exploring."
+                    :task (shell "vault server -dev -dev-root-token-id=myroot")}
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}

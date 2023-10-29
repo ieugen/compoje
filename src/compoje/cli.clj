@@ -181,6 +181,7 @@
 
 (defn register-default-providers!
   "Register providers available for calling."
+  ;; TODO: Do we need to register the provider?
   []
   (providers/register-provider! (vault-p/->VaultSecretsProvider)))
 

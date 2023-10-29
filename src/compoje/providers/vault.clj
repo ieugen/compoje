@@ -1,31 +1,14 @@
 (ns compoje.providers.vault
   (:require [babashka.fs :as fs]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [compoje.providers :as providers]
             [compoje.utils :as u]
-            [vault.client.http]
-            [vault.core :as vault]
-            [vault.secrets.kvv2 :as kv2]))
-
-(defn token-path
-  "Return the ^File to the vault token file.
-   Vault client creates a token file at $HOME/.vault-token ."
-  ([]
-   (-> (fs/file (System/getProperty "user.home")
-                ".vault-token")
-       (fs/absolutize)
-       (fs/file))))
-
-(defn load-token!
-  "Read the token file if exits and return it as ^String.
-   Return nil if it does not exist.
-   Throw error if can't read."
-  ([]
-   (load-token! (token-path)))
-  ([f]
-   (when (fs/exists? f)
-     (slurp f))))
+            [vault.client :as vault]
+            [vault.auth.approle :as approle]
+            [vault.secret.kv.v2 :as kv2]))
 
 (defn authenticated-client
   "Try to get a vault authenticated client.
@@ -34,16 +17,20 @@
   ([& opts]
    (let [{:keys [token addr app-role-id app-secret-id]} opts
          token (or token
+                   (System/getProperty "vault.token")
                    (System/getenv "VAULT_TOKEN")
-                   (load-token!))
+                   (let [token-file (io/file (System/getProperty "user.home")
+                                             ".vault-token")]
+                     (when (.exists token-file)
+                       (str/trim (slurp token-file)))))
+         addr (or addr
+                  (System/getenv "VAULT_ADDR"))
          app-role-id (or app-role-id
                          (System/getenv "VAULT_APP_ROLE_ID"))
          app-secret-id (or app-secret-id
                            (System/getenv "VAULT_APP_SECRET_ID"))
          app-role? (and (some? app-role-id)
                         (some? app-secret-id))
-         addr (or addr
-                  (System/getenv "VAULT_ADDR"))
          client (vault/new-client addr)
          state (atom {})]
      (when-not addr
@@ -51,13 +38,13 @@
                    Pass value or set $VAULT_ADDR")
        (System/exit 1))
      (if app-role?
-       (let [client (vault/authenticate! client :app-role
+       (let [client (approle/login client :app-role
                                          {:role-id app-role-id
                                           :secret-id app-secret-id})]
          (swap! state merge {:client client
                              :method :app-role}))
        (if token
-         (let [client (vault/authenticate! client :token token)]
+         (let [client (vault/authenticate! client token)]
            (swap! state merge {:client client
                                :method :token}))
          (log/debug "No valid auth method found.
@@ -74,7 +61,8 @@
   [client secret-spec]
   (log/trace "Fetch secret" secret-spec)
   (let [{:keys [mount-path secret-path opts]} secret-spec
-        content (kv2/read-secret client mount-path secret-path opts)]
+        client (kv2/with-mount client mount-path)
+        content (kv2/read-secret client secret-path opts)]
     (assoc secret-spec :content content)))
 
 (defn secret->file!
@@ -130,13 +118,10 @@
 
   ::vault
 
-  (def client (vault/new-client "https://vault.do.drevidence.com:8200"))
-
-  (vault/authenticate! client :token (load-token!))
-
-  (println client)
+  (def client (authenticated-client))
 
   (try
-    (kv2/list-secrets client "DocSearch" "/")
+    (let [client (kv2/with-mount client "my-secret")]
+      (kv2/list-secrets client "/"))
     (catch Exception e
       (println e))))

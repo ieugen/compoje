@@ -1,5 +1,5 @@
 (ns unit.compoje.render-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing run-test]]
             [compoje.render :as r]))
 
 (deftest render-test
@@ -23,3 +23,17 @@
     (let [tpl (r/render "test/resources/simple.tpl"
                         {:values {:hello "world"}})]
       (is (= tpl "Hello world!")))))
+
+
+(deftest test-to-yaml-render-helper
+
+  (testing "render template with to-yaml \n"
+    (let [res (r/render "test/resources/to-yaml.01.tpl"
+                        {:props [{:a 1}]})]
+      (spit "test/resources/to-yaml.01.tpl.generated.yml" res)
+      (is (= res "- name: test\n- properties:\n  - a: 1\n")))))
+
+(comment
+
+  (run-test test-to-yaml-render-helper)
+  )

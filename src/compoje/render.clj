@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [selmer.filters :refer [add-filter!]]
+            [clj-yaml.core :as yaml]
             [selmer.parser :as parser]
             [selmer.util :refer [without-escaping]]))
 
@@ -44,7 +45,17 @@
     s))
 
 (comment
-  (map strip-quotes ["" "\"" "a" "\" a \"" "'a'"]))
+
+
+  (println (yaml/generate-string
+            [{:name "John Smith", :age 33}
+             {:name "Mary Smith", :age 27}]
+            :dumper-options {:indent 6
+                             :indicator-indent 4
+                             :flow-style :block}))
+
+  (map strip-quotes ["" "\"" "a" "\" a \"" "'a'"])
+  )
 
 
 (defn file-path
@@ -67,8 +78,27 @@
         hash (hash-file f "md5")]
     (subs hash 0 6)))
 
+(defn to-yaml
+  "Convert context data to formatted yaml and include it in the template."
+  [args context-map]
+  (let [data-key (first args)
+        data (or (get context-map data-key)
+                 (get context-map (keyword data-key)))
+        content (yaml/generate-string data :dumper-options {:flow-style :block})]
+    (tap> {"args:" args
+          "context-map" context-map
+          "content" content})
+    content))
+
+(comment
+
+  (parser/resolve-arg "Hello {{variable}}" {:variable "John"})
+
+  )
+
 (parser/add-tag! :file-path file-path)
 (parser/add-tag! :file-hash file-hash)
+(parser/add-tag! :to-yaml to-yaml)
 
 (defn load-template
   ([template-file]
@@ -84,7 +114,7 @@
    (render template-file context nil))
   ([template-file context {:keys [render-opts]
                            :or {render-opts {:tag-open \< :tag-close \>}}
-                           :as opts}]
+                           :as _opts}]
    (let [tpl (load-template template-file)
          result (without-escaping
                  (parser/render tpl context render-opts))]
@@ -99,4 +129,6 @@
 
   (parser/render "{% file-hash quux %} {% foo baz %}" {})
 
-  (parser/render "{%  quux %} {% foo baz %}" {}))
+  (parser/render "{%  quux %} {% foo baz %}" {})
+
+  )

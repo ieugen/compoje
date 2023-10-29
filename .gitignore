@@ -3,3 +3,8 @@
 .cpcache/
 .lsp/.cache
 .portal/
+
+dev/
+.nrepl-port
+
+test/resources/*.generated.yml
