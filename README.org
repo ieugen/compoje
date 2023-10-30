@@ -104,6 +104,18 @@ In your *deps.edn* file you should add an alias used to call compoje in your pro
 See https://docs.docker.com/compose/compose-file/11-extension/ .
 - Implement a file based secrets provider (compatible with ansible vault ?!) for people who don't use / need vault .
 
+** Ansible vault implementation
+
+A secret provider useful for smaller, independent deployments or bootstrapping.
+Does not require any running services.
+
+#+BEGIN_SRC shell
+# encrypt file with ansible vault for test
+ansible-vault create --vault-id compoje@test/resources/ansible_vault/password01.txt  test/resources/ansible_v
+ault/example01.crypt.yml
+
+#+END_SRC
+
 ** TODOs
 
 Things that need to be done:
