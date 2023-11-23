@@ -219,8 +219,72 @@
         b-key2 (Arrays/copyOfRange b-derived-key key-length (* 2 key-length))]
     [b-key1 b-key2 b-iv]))
 
+(defn padded-buffer-size
+  "Determine the size of the buffer with padding."
+  [block-size-bytes buffer-size-bytes]
+  (cond
+    (= 0 buffer-size-bytes) 0
+    (<= buffer-size-bytes block-size-bytes) block-size-bytes
+    :else
+    (let [block-count (inc (quot buffer-size-bytes block-size-bytes))]
+      (* block-size-bytes block-count))))
+
+(defn padding-value
+  [block-size-bytes buffer-size-bytes]
+  (byte (cond
+          (= 0 buffer-size-bytes) 0
+          (<= buffer-size-bytes block-size-bytes)
+          (- block-size-bytes buffer-size-bytes)
+          :else (mod buffer-size-bytes block-size-bytes))))
+
+(tests
+
+ (padded-buffer-size 48 0) := 0
+ (padded-buffer-size 48 32) := 48
+ (padded-buffer-size 48 48) := 48
+ (padded-buffer-size 48 49) := 96
+
+ (padding-value 48 36) := 12
+
+ )
+
+
+(defn pkcs7-padding
+  "Inspired from docs:
+   https://cryptography.io/en/latest/hazmat/primitives/padding/#module-cryptography.hazmat.primitives.padding
+   PKCS7 padding is a generalization of PKCS5 padding (also known as standard padding).
+   PKCS7 padding works by appending N bytes with the value of chr(N),
+   where N is the number of bytes required to make the final block of
+   data the same size as the block size."
+  [block-size-bits buffer]
+  (let [block-size-bytes (/ block-size-bits 8)
+        buffer-size-bytes (int (count buffer))
+        buffer-with-padding-size (padded-buffer-size block-size-bytes buffer-size-bytes)
+        n (padding-value block-size-bytes buffer-size-bytes)
+        padding-required? (pos-int? n)]
+    (tap> {:padding-required? padding-required?
+           :n n
+           :block-size-bytes block-size-bytes
+           :buffer-size-bytes buffer-size-bytes
+           :buffer-with-padding-size buffer-with-padding-size})
+    (if padding-required?
+      (let [bytes (byte-array buffer-with-padding-size buffer)
+            to-index (int (+ buffer-size-bytes n))]
+        (tap> {:bytes-with-padding buffer-with-padding-size
+               :from-index buffer-size-bytes
+               :to-index to-index})
+        (Arrays/fill bytes buffer-size-bytes to-index (byte n))
+        bytes)
+      buffer)))
+
 
 (comment
+
+  (let [text "my_encrypted_var: \"Eugen - Netdava\"\n"
+        bytes (.getBytes text StandardCharsets/UTF_8)
+        padded-bytes (pkcs7-padding 384 bytes)]
+    (spit "padding.yml" (String. padded-bytes StandardCharsets/UTF_8)))
+
 
   (def data "my_encrypted_var: !vault |
           $ANSIBLE_VAULT;1.2;AES256;dev
@@ -256,13 +320,19 @@
         iv-spec (IvParameterSpec. b-iv)
         cipher (doto (Cipher/getInstance "AES/CTR/NoPadding")
                  (.init Cipher/DECRYPT_MODE secret-key iv-spec))
-        data (.doFinal cipher b-ciphertext)]
+        data (.doFinal cipher b-ciphertext)
+        decripted-data (String. data StandardCharsets/UTF_8)]
     (println "aaa"
              (count b-key1)
              (count b-key2)
              (count b-iv)
-             (Arrays/equals b-hmac b-crypted-hmac))
-    (println "Decrypted" (String. data StandardCharsets/UTF_8)))
+             (Arrays/equals b-hmac b-crypted-hmac)
+             (count decripted-data)
+             (count data))
+    (spit "decrypted.yml" decripted-data)
+    (println "Decrypted" decripted-data))
 
+  ;; 12 - 0x0C
+  ;; 48-12
 
   )
