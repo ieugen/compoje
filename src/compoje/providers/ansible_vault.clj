@@ -244,12 +244,38 @@
  (padded-buffer-size 48 48) := 48
  (padded-buffer-size 48 49) := 96
 
- (padding-value 48 36) := 12
+ (padding-value 48 36) := 12)
 
- )
+(defn valid-block-size?
+  "Throw exception if block size in bits:
+    - is not multiple of 8
+    - less than 2040 inclusive"
+  [block-size-in-bits]
+  (when (<= block-size-in-bits 0)
+    (throw (ex-info "Block size in bits smaller than 0"
+                    {:block-size-bits block-size-in-bits})))
+  (when (> block-size-in-bits 2040)
+    (throw (ex-info "Block size in bits larger than 2040"
+                    {:block-size-bits block-size-in-bits})))
+  (when (pos? (mod block-size-in-bits 8))
+    (throw (ex-info "Block size in bits is not multiple of 8"
+                    {:block-size-bits block-size-in-bits})))
+  true)
+(defn size-bits->size-bytes
+  "Compute block size in bytes, given bits"
+  [block-size-bits]
+  (/ block-size-bits 8))
 
+(tests
 
-(defn pkcs7-padding
+ (valid-block-size? 16) := true
+
+ (valid-block-size? -1) :throws clojure.lang.ExceptionInfo
+ (valid-block-size? 0) :throws clojure.lang.ExceptionInfo
+ (valid-block-size? 15) :throws clojure.lang.ExceptionInfo
+ (valid-block-size? 2041) :throws clojure.lang.ExceptionInfo)
+
+(defn pkcs7-pad
   "Inspired from docs:
    https://cryptography.io/en/latest/hazmat/primitives/padding/#module-cryptography.hazmat.primitives.padding
    PKCS7 padding is a generalization of PKCS5 padding (also known as standard padding).
@@ -257,32 +283,81 @@
    where N is the number of bytes required to make the final block of
    data the same size as the block size."
   [block-size-bits buffer]
-  (let [block-size-bytes (/ block-size-bits 8)
+  (valid-block-size? block-size-bits)
+  (let [block-size-bytes (size-bits->size-bytes block-size-bits)
         buffer-size-bytes (int (count buffer))
         buffer-with-padding-size (padded-buffer-size block-size-bytes buffer-size-bytes)
         n (padding-value block-size-bytes buffer-size-bytes)
         padding-required? (pos-int? n)]
-    (tap> {:padding-required? padding-required?
-           :n n
-           :block-size-bytes block-size-bytes
-           :buffer-size-bytes buffer-size-bytes
-           :buffer-with-padding-size buffer-with-padding-size})
     (if padding-required?
       (let [bytes (byte-array buffer-with-padding-size buffer)
             to-index (int (+ buffer-size-bytes n))]
-        (tap> {:bytes-with-padding buffer-with-padding-size
-               :from-index buffer-size-bytes
-               :to-index to-index})
         (Arrays/fill bytes buffer-size-bytes to-index (byte n))
         bytes)
       buffer)))
 
+(defn has-pkcs7-padding?
+  "Check if a buffer is padded.
+   Returns the pading byte."
+  [buffer]
+  (let [buffer-size (count buffer)
+        last-byte (aget buffer (dec buffer-size))]
+    (loop [i (- buffer-size last-byte)]
+      (if (>= i buffer-size)
+        ;; no more bytes to process, return padding byte
+        (byte last-byte)
+        ;; process current byte
+        (let [current-byte (aget buffer i)
+              is-padding? (= current-byte last-byte)]
+          (if-not is-padding?
+            ;; byte is not padding so we end processing
+            false
+            ;; byte is padding - continue with next byte
+            (recur (inc i))))))))
+
+(tests
+
+ (let [s "my_encrypted_var: \"Eugen - Netdava\"\n"
+       s-bytes (.getBytes s StandardCharsets/UTF_8)]
+   (has-pkcs7-padding? s-bytes)) := (byte 12))
+
+(defn pkcs7-unpad
+  "Removes pkcs7 padding from a given block size (in bits) and a byte array"
+  [block-size-bits buffer]
+  (valid-block-size? block-size-bits)
+  (let [size-bytes (size-bits->size-bytes block-size-bits)
+        buffer-size (count buffer)
+        blocks (/ buffer-size size-bytes)]
+    (when-not (pos-int? blocks)
+      (throw (ex-info "Buffer must be a multiple of block-size"
+                      {:block-size-bits block-size-bits
+                       :block-size-bytes size-bytes
+                       :buffer-size buffer-size})))
+
+    (if (zero? buffer-size)
+      buffer
+      (if-let [padding-byte (has-pkcs7-padding? buffer)]
+        (Arrays/copyOfRange buffer 0 (- buffer-size padding-byte))
+        buffer))))
 
 (comment
 
+  (let [s "my_encrypted_var: \"Eugen - Netdava\"\n"
+        s-bytes (.getBytes s StandardCharsets/UTF_8)]
+    (String. (pkcs7-unpad 384 s-bytes)))
+
+
+  )
+
+(comment
+
+  (def a2 (int-array '(9 8 7 6)))
+  (aget a2 (dec (count a2)))
+
+
   (let [text "my_encrypted_var: \"Eugen - Netdava\"\n"
         bytes (.getBytes text StandardCharsets/UTF_8)
-        padded-bytes (pkcs7-padding 384 bytes)]
+        padded-bytes (pkcs7-pad 384 bytes)]
     (spit "padding.yml" (String. padded-bytes StandardCharsets/UTF_8)))
 
 
