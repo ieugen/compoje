@@ -11,7 +11,8 @@
             [compoje.render :as render]
             [compoje.utils :as u]
             [taoensso.timbre :as log]
-            [babashka.fs :as fs])
+            [babashka.fs :as fs]
+            [clojure.java.io :as io])
   (:gen-class))
 
 (def main-opts
@@ -195,13 +196,13 @@
   [parsed context]
   (let [{:keys [config-file options arguments]} parsed
         {dry-run :dry-run set-args :set} options
-        config-file (config/absolute-path config-file)
+        config-file (fs/file config-file)
         template-dir (config/config-name->template-dir config-file)
-        config (config/load-config! config-file)
+        cli-ctx (context/set-args->map set-args)
+        config (config/load-config! config-file cli-ctx)
         provider-results (providers/provide-secrets
                           (assoc config :template-dir template-dir))
         file-ctx (context/load-context! template-dir config provider-results)
-        cli-ctx (context/set-args->map set-args)
         context (context/final-context file-ctx context cli-ctx)
         docker (:docker context)
         template-file (str (fs/file template-dir "stack.tpl.yml"))

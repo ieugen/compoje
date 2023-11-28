@@ -174,12 +174,6 @@
     ;; TODO: support user supplied tag parsing ?!
     value))
 
-
-(defn decrypt
-  [algorithm cipher-text key iv]
-  (let [cipher (Cipher/getInstance "AES/CTR/PKCS5Padding")]))
-
-
 (defn create-key-cryptography
   "Generate the full encryption key."
   [password salt key-length iv-length]
@@ -348,6 +342,41 @@
 
 
   )
+
+(defn decrypt
+  [algorithm cipher-text key iv]
+  (let [cipher (Cipher/getInstance "AES/CTR/PKCS5Padding")])
+  (let [file-data (parse-vault-secret "$ANSIBLE_VAULT;1.2;AES256;compoje
+                    30636333393437623365383966343231613061383131353661386333656231393863646235323566
+                    3636336231326131303436363631633130343562623962620a343731666637306466623632636665
+                    32376633376439646364313438333633376530656335613566343863666563373364396430306131
+                    3634356235306663300a383534653236306333396237663931306239616332643266336538303466
+                    30356635303662306161303432396464376664313865343735623930333538353639663831633931
+                    6334613831633036383039393762616430613662363835336365")
+        crypto-data (String. (unhexlify (:data file-data)) StandardCharsets/UTF_8)
+        parts (str/split-lines crypto-data)
+        salt (unhexlify (nth parts 0))
+        b-crypted-hmac (unhexlify (nth parts 1))
+        b-ciphertext (unhexlify (nth parts 2))
+        pass "s€cure"
+          ;; https://github.com/ansible/ansible/blob/f8de6caeec735fad53c2fa492c94608e92ebfb06/lib/ansible/parsing/vault/__init__.py#L1140C19-L1140C19
+        [b-key1 b-key2 b-iv] (gen-key-initctr pass salt)
+        b-hmac (hmac b-key2 b-ciphertext)
+        secret-key (SecretKeySpec. b-key1 "AES")
+        iv-spec (IvParameterSpec. b-iv)
+        cipher (doto (Cipher/getInstance "AES/CTR/NoPadding")
+                 (.init Cipher/DECRYPT_MODE secret-key iv-spec))
+        data (.doFinal cipher b-ciphertext)
+        decripted-data (String. data StandardCharsets/UTF_8)]
+    (println "aaa"
+             (count b-key1)
+             (count b-key2)
+             (count b-iv)
+             (Arrays/equals b-hmac b-crypted-hmac)
+             (count decripted-data)
+             (count data))
+    (spit "decrypted.yml" decripted-data)
+    (println "Decrypted" decripted-data)))
 
 (comment
 

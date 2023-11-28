@@ -1,11 +1,13 @@
 (ns compoje.config
-  (:require [aero.core :refer [read-config]]
-            [babashka.fs :as fs]
+  (:require [babashka.fs :as fs]
             [clj-yaml.core :as yaml]
             [clojure.java.io :as io]
+            [clojure.edn :as edn]
             [clojure.tools.logging :as log]
             [clojure.walk :as walk]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [compoje.utils :as u])
+  (:import [java.io IOException]))
 
 (defn unlazify
   "Make vectors instead of lazy sequences
@@ -16,13 +18,6 @@
                     %)]
     (walk/postwalk seq->vec x)))
 
-(defn absolute-path
-  "Build a path to the compoje configuration inside the template directory."
-  ([config-file]
-   (-> (fs/file config-file)
-       fs/absolutize
-       fs/file)))
-
 (defn config-name->template-dir
   "Takes a config file and returns the template directory."
   ([config-file]
@@ -32,40 +27,67 @@
      (log/trace "Template dir" f)
      f)))
 
+(defn cli-args->config
+  "Parse any configuration options from cli args.
+
+   Return a configuration map with any values.
+
+   We expect the args we receive to be values
+   processed by tools.cli parse-opts fn."
+  [config-edn-str]
+  (let [config (edn/read-string config-edn-str)]
+    (if (map? config)
+      config
+      {})))
+
+
 (defn read-config-yaml
   "Parse yaml from a file path"
-  [path]
+  [name]
   (->
-   (yaml/parse-stream (io/reader path))
+   (yaml/parse-stream (io/reader name))
    unlazify))
 
-(defn load-config!
-  "Read configuration from a path.
-   Returns a clojure map."
-  [path]
-  (let [ext (str/lower-case (fs/extension path))]
+(defn file->config!
+  "Read config-file as a edn.
+   If config-file is nil, return nil.
+   On IO exception print warning and return nil."
+  [^String config-file]
+  (when config-file
     (try
-      (if (= ext "edn")
-        (read-config path)
-        ;; Consider yaml by default
-        (read-config-yaml path))
-      (catch java.io.FileNotFoundException e
-        (log/debug "File not found" (str path))
-        (log/trace "Exception" e)
-      ;; Use nil when configuration is missing
-        nil))))
+      (let [config-path (fs/file config-file)
+            cfg (read-config-yaml config-path)]
+        (get cfg :compoje))
+      (catch IOException e
+        (u/println-err "WARN: Error reading config" (.getMessage e))))
+    ))
+
+(defn load-config!
+  "Load configuration and merge options.
+
+   Options are loaded in this order.
+   Sbsequent values are deepmerged and replace previous ones.
+
+   - configuration file - if it exists and we can parse it
+   - command line arguments passed to the application
+
+   Return a configuration map."
+  [config-file config-data]
+  (let [config (file->config! config-file)
+        args (cli-args->config config-data)]
+    (u/deep-merge config args)))
 
 (comment
 
-  (read-config "example-stacks/nginx/compoje.edn")
 
-
-  (def cfg (read-config-yaml "example-stacks/nginx/compoje.yml"))
+  (def cfg (read-config-yaml "example-stacks/nginx/stack.tpl.yml"))
   cfg
+  (def cfg (file->config! "example-stacks/nginx/stack.tpl.yml"))
 
   (type (:providers cfg))
 
-  (str/lower-case (fs/extension "a.Yaml") )
+  (str/lower-case (fs/extension "a.Yaml"))
+
 
 
   )

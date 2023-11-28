@@ -9,6 +9,13 @@ bb compoje deploy path/to/stack.tpl.yml
 #+END_SRC
 
 The app is going to do the following actions:
+
+- Read configurations from file, cli args and build a context
+- Run the providers and enhance the context with provider data
+- Render the template to a stack using the context and any files referenced by stack
+- Deploy the stack
+
+Old:
 - Read the compoje file provided as cli arg e.g. **path/to/stack.tpl.yml**.
   This file can be a compoje config or compoje config file only or compoje config + docker stack definition
 - Read configuration options from environment, and CLI args
@@ -29,6 +36,7 @@ The app is going to do the following actions:
 
 Compoje configuration can be considered a map of keys and values.
 Some values can be maps as well.
+The options are under 'compoje' key.
 
 Currently it looks like this:
 
@@ -72,9 +80,15 @@ compoje:
         memory: 20M
 #+END_SRC
 
+*** Compoje context
+
+Compoje builds a 'context' from configuration, cli args and providers.
+It uses this context for rendering the template.
+
 *** Compoje stack file
 
 A compoje stack file is Docker compose stack file + a **compoje:** key which holds the compoje configuration.
+Compoje configuration is used to build the context but it is not part of redering.
 
 Bellow is an example of how this could look like:
 #+BEGIN_SRC yaml

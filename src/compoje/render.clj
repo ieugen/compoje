@@ -1,6 +1,6 @@
 (ns compoje.render
   (:require [babashka.fs :as fs]
-            [clojure.string :as str]
+            [compoje.utils :as u]
             [clojure.tools.logging :as log]
             [selmer.filters :refer [add-filter!]]
             [clj-yaml.core :as yaml]
@@ -28,49 +28,19 @@
 
 (add-filter! :hash-file hash-file)
 
-(defn strip-quote
-  [s quote-char]
-  (let [s (if (str/starts-with? s quote-char)
-            (subs s 1)
-            s)
-        s (if (str/ends-with? s quote-char)
-            (subs s 0 (dec (count s)))
-            s)]
-    s))
-
-(defn strip-quotes
-  [s]
-  (let [s (strip-quote s "\"")
-        s (strip-quote s "'")]
-    s))
-
-(comment
-
-
-  (println (yaml/generate-string
-            [{:name "John Smith", :age 33}
-             {:name "Mary Smith", :age 27}]
-            :dumper-options {:indent 6
-                             :indicator-indent 4
-                             :flow-style :block}))
-
-  (map strip-quotes ["" "\"" "a" "\" a \"" "'a'"])
-  )
-
-
 (defn file-path
   [args context-map]
   (log/trace "file-path" args "->" context-map)
   (let [{:keys [template-dir]} context-map
         fname (first args)
-        fname (strip-quotes fname)]
+        fname (u/strip-quotes fname)]
     (str (fs/absolutize (fs/file template-dir fname)))))
 
 (defn file-hash
   [args context-map]
   (log/trace "file-hash" args "->" context-map)
   (let [fname (first args)
-        fname (strip-quotes fname)
+        fname (u/strip-quotes fname)
         {:keys [template-dir]} context-map
         f (-> (fs/file template-dir fname)
               fs/absolutize
@@ -121,6 +91,13 @@
      result)))
 
 (comment
+
+  (println (yaml/generate-string
+            [{:name "John Smith", :age 33}
+             {:name "Mary Smith", :age 27}]
+            :dumper-options {:indent 6
+                             :indicator-indent 4
+                             :flow-style :block}))
 
   (without-escaping
    (parser/render "{{x}}" {:x "I <3 NY"}))

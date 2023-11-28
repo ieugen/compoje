@@ -1,6 +1,6 @@
 compoje:
   docker:
-    stack: nginx
+    stack: redis-example
   providers: []
     # - name: my-vault
     #   type: compoje.providers.vault/vault
@@ -42,7 +42,6 @@ services:
     configs:
       - source: nginx_cfg
         target: /etc/nginx/conf.d/default.conf
-
 
 networks:
   host_network:
