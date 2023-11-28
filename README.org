@@ -4,31 +4,13 @@ Using Docker compose file spec for Docker Swarm deployment lacks some features.
 Hence this project.
 
 - Docker swarm assumes a smart client - provides a basic set of features.
- More advanced functionality is expected to be implemented by smart clients.
-- Secrets and configurations are immutable. Swarm stack deploy will fail if you redeploy.
-
+  More advanced functionality is expected to be implemented by smart clients.
+- Secrets and configurations are immutable.
+  Swarm deploy will fail if you change and redeploy a secrets with the same name.
 
 ** How it works
 
-Considering the call bellow:
-
-#+BEGIN_SRC shell
-bb compoje deploy path/to/compoje.yaml
-#+END_SRC
-
-The app is going to do the following actions:
-- Will read the configuration from file **path/to/compoje.yaml**
-- Will build a context from configuration file,
-environtment variables and command line argument
-- Environment variables and cli args will be merged with context values.
-They can overwrite file configuration.
-- If any providers are defined, we call them to create files / context data.
-We have a provider for Hashicorp Vault - to fetch secrets.
-- It reads the stack template file (default **stack.tpl.yml**).
-It renders the template with the context that we built above.
-We generate a stack for deployment - default: stack.generated.yml
-- We call the driver to deploy the stack. Default driver is docker client.
-We shell out to docker.
+For documentation see [[docs/docs.org]].
 
 ** Features
 

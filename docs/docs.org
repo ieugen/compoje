@@ -1,0 +1,32 @@
+#+TITLE: Compoje documentation
+
+
+** How compoje works
+
+Considering the call bellow:
+
+#+BEGIN_SRC shell
+bb compoje deploy path/to/stack.tpl.yml
+#+END_SRC
+
+The app is going to do the following actions:
+- Read the compoje file provided as cli arg e.g. **path/to/compoje.yml**.
+  This file can be a compoje config or compoje config file only or compoje config + docker stack definition
+- Read configuration options from environment, and CLI args
+- Deep merge the configurations in order.
+  Cli args will override env options which will override config file options.
+- Build a context from configuration - context is used to render the template
+- Call any providers available in configuration
+  Merge the provided data in the context (under "secrets" key).
+- Read the stack template file if needed (default **stack.tpl.yml**)
+  Render the template with the context that we built above.
+  Generate a stack for deployment - default name **stack.generated.yml**
+- Call the driver to deploy the stack. Default driver is docker client.
+  We shell out to docker for now.
+- Clean up provider data
+
+
+** Compoje stack file
+
+Compoje stack file is Docker compose stack file + a **compoje:** key which holds the compoje configuration.
+
