@@ -198,12 +198,11 @@
         {dry-run :dry-run set-args :set} options
         config-file (fs/file config-file)
         template-dir (config/config-name->template-dir config-file)
-        cli-ctx (context/set-args->map set-args)
-        config (config/load-config! config-file cli-ctx)
+        config (config/load-config! config-file set-args)
         provider-results (providers/provide-secrets
                           (assoc config :template-dir template-dir))
         file-ctx (context/load-context! template-dir config provider-results)
-        context (context/final-context file-ctx context cli-ctx)
+        context (context/final-context file-ctx context)
         docker (:docker context)
         template-file (str (fs/file template-dir "stack.tpl.yml"))
         contents (render/render template-file context {})]

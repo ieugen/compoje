@@ -27,40 +27,35 @@
      (log/trace "Template dir" f)
      f)))
 
-(defn cli-args->config
-  "Parse any configuration options from cli args.
-
-   Return a configuration map with any values.
-
-   We expect the args we receive to be values
-   processed by tools.cli parse-opts fn."
-  [config-edn-str]
-  (let [config (edn/read-string config-edn-str)]
-    (if (map? config)
-      config
-      {})))
-
-
 (defn read-config-yaml
-  "Parse yaml from a file path"
+  "Parse yaml using clojure.java.io/reader.
+   Accepts any source reader accepts:
+   String, bytes, URL, file, InputStream.
+
+   Parses Yaml 1.1 format - packaged with babashka.
+   TODO: find a way to use more cleaner Yaml 1.2"
   [name]
   (->
    (yaml/parse-stream (io/reader name))
    unlazify))
 
 (defn file->config!
-  "Read config-file as a edn.
-   If config-file is nil, return nil.
-   On IO exception print warning and return nil."
-  [^String config-file]
-  (when config-file
+  "Read config as a yaml.
+   config can be any source clojure.java.io/reader accepts:
+   - String, URI, InputStream, File, etc.
+
+   Return the data under compoje key.
+
+   If config is nil, return nil.
+   On ^IOException print warning and return nil."
+  [config]
+  (when config
     (try
-      (let [config-path (fs/file config-file)
-            cfg (read-config-yaml config-path)]
+      (let [cfg (read-config-yaml config)]
         (get cfg :compoje))
       (catch IOException e
-        (u/println-err "WARN: Error reading config" (.getMessage e))))
-    ))
+        (u/println-err
+         "WARN: Error reading config" (.getMessage e))))))
 
 (defn load-config!
   "Load configuration and merge options.
@@ -72,9 +67,9 @@
    - command line arguments passed to the application
 
    Return a configuration map."
-  [config-file config-data]
+  [config-file set-args]
   (let [config (file->config! config-file)
-        args (cli-args->config config-data)]
+        args (u/set-args->map set-args)]
     (u/deep-merge config args)))
 
 (comment
