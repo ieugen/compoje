@@ -1,6 +1,5 @@
 #+TITLE: Compoje documentation
 
-
 ** How compoje works
 
 Considering the call bellow:
@@ -10,7 +9,7 @@ bb compoje deploy path/to/stack.tpl.yml
 #+END_SRC
 
 The app is going to do the following actions:
-- Read the compoje file provided as cli arg e.g. **path/to/compoje.yml**.
+- Read the compoje file provided as cli arg e.g. **path/to/stack.tpl.yml**.
   This file can be a compoje config or compoje config file only or compoje config + docker stack definition
 - Read configuration options from environment, and CLI args
 - Deep merge the configurations in order.
@@ -26,7 +25,98 @@ The app is going to do the following actions:
 - Clean up provider data
 
 
-** Compoje stack file
+** Compoje configuration
 
-Compoje stack file is Docker compose stack file + a **compoje:** key which holds the compoje configuration.
+Compoje configuration can be considered a map of keys and values.
+Some values can be maps as well.
 
+Currently it looks like this:
+
+#+BEGIN_SRC yaml
+# Configuration options are kept under compoje key
+compoje:
+  # We have a docker deployment options under docker key:
+  docker:
+    stack: stack-name
+    context: remote-swarm
+  # Providers for secrets and data
+  providers:
+    - name: my-vault
+      type: "compoje.providers.vault/vault"
+      addr: "http://localhost:8200"
+  # Secret declarations
+  secrets:
+    # Call secret provider and pass each secret declaration
+    - name: cert-key
+      provider: my-vault
+      local-path: nginx/cert.key
+      spit-key: cert.key
+      mount-path: secret
+      secret-path: nginx
+    - name: cert
+      provider: my-vault
+      local-path: nginx/cert.crt
+      spit-key: cert.crt
+      mount-path: secret
+      secret-path: nginx
+  # configuration options to reference in templates
+  values:
+    # example of custom values to use in template
+    nginx-resources:
+      limits:
+        cpus: '0.50'
+        memory: 50M
+        pids: 1
+      reservations:
+        cpus: '0.25'
+        memory: 20M
+#+END_SRC
+
+*** Compoje stack file
+
+A compoje stack file is Docker compose stack file + a **compoje:** key which holds the compoje configuration.
+
+Bellow is an example of how this could look like:
+#+BEGIN_SRC yaml
+compoje:
+  docker:
+    stack: my-stack
+    context: my-remote-swarm
+services:
+  web:
+    image: my-web-image
+    # ...
+#+END_SRC
+
+
+** Providers
+
+Compoje uses providers to fetch data and make it available for stack rendering.
+The main purpose is to fetch secrets and/or configuration data from secret and/or configuration stores.
+
+Examples of providers are:
+- provider to decrypt ansible vault encrypted files
+- provider to fetch secrets from Hashicorp Vault
+
+Compoje comes with some built-in providers.
+We might extend compoje to allow third party providers.
+
+*** File
+
+Built-in provider with type and name compoje.providers.file .
+Load data from a file and make it available in the context.
+
+*** Asible vault
+
+Built-in provider with name compoje.providers.ansible-vault .
+Load data from a file encrypted using ansible vault specification
+
+*** HTTP
+
+Built-in provider with name compoje.providers.http .
+Load data from http(s) endpoint and make it available in the context
+
+*** Hashicorp vault
+
+Built-in provider with name compoje.providers.vault .
+Load data from an instance of Hashicorp Vault.
