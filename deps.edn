@@ -1,31 +1,33 @@
 {:paths ["src" "resources"]
- :deps {aero/aero {:mvn/version "1.1.6"}
-        babashka/fs {:mvn/version "0.4.19"}
+ :deps {babashka/fs {:mvn/version "0.4.19"}
         babashka/process {:mvn/version "0.5.21"}
         cheshire/cheshire {:mvn/version "5.12.0"}
         clj-commons/clj-yaml {:mvn/version "1.0.27"}
-        com.amperity/vault-clj {:mvn/version "2.0.560"}
+        com.amperity/vault-clj {:mvn/version "2.2.586"}
         com.hyperfiddle/rcf {:git/url "https://github.com/hyperfiddle/rcf"
                              :git/sha "5d81fde08ce3f1ba72325b398303129a76e5e2a8"}
-        com.taoensso/timbre {:mvn/version "6.2.1"}
-        metosin/malli {:mvn/version "0.11.0"}
+        com.taoensso/timbre {:mvn/version "6.3.1"}
+        metosin/malli {:mvn/version "0.13.0"}
         org.clojure/clojure {:mvn/version "1.11.1"}
         org.clojure/tools.cli {:mvn/version "1.0.219"}
         org.clojure/tools.logging {:mvn/version "1.2.4"}
         selmer/selmer {:mvn/version "1.12.59"}}
  :aliases {:dev {:extra-paths ["dev" "test" "test-resources"]
                  :extra-deps {clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
-                              com.fzakaria/slf4j-timbre {:mvn/version "0.4.0"}
-                              djblue/portal {:mvn/version "0.48.0"}
-                              org.slf4j/jcl-over-slf4j {:mvn/version "1.7.36"}
-                              org.slf4j/jul-to-slf4j {:mvn/version "1.7.36"}
-                              org.slf4j/log4j-over-slf4j {:mvn/version "1.7.36"}}}
+                              com.fzakaria/slf4j-timbre {:mvn/version "0.4.1"}
+                              djblue/portal {:mvn/version "0.49.1"}
+                              org.slf4j/jcl-over-slf4j {:mvn/version "2.0.9"}
+                              org.slf4j/jul-to-slf4j {:mvn/version "2.0.9"}
+                              org.slf4j/log4j-over-slf4j {:mvn/version "2.0.9"}}}
            :test {:main-opts ["-m" "kaocha.runner"]
                   :extra-paths ["test" "test-resources"]
                   :jvm-opts ["-Dhyperfiddle.rcf.generate-tests=true"]
                   :extra-deps {clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
-                               com.fzakaria/slf4j-timbre {:mvn/version "0.4.0"}
-                               lambdaisland/kaocha {:mvn/version "1.85.1342"}
-                               org.slf4j/jcl-over-slf4j {:mvn/version "1.7.36"}
-                               org.slf4j/jul-to-slf4j {:mvn/version "1.7.36"}
-                               org.slf4j/log4j-over-slf4j {:mvn/version "1.7.36"}}}}}
+                               com.fzakaria/slf4j-timbre {:mvn/version "0.4.1"}
+                               lambdaisland/kaocha {:mvn/version "1.87.1366"}
+                               org.slf4j/jcl-over-slf4j {:mvn/version "2.0.9"}
+                               org.slf4j/jul-to-slf4j {:mvn/version "2.0.9"}
+                               org.slf4j/log4j-over-slf4j {:mvn/version "2.0.9"}}}
+           :outdated {:deps {com.github.liquidz/antq {:mvn/version "RELEASE"}
+                             org.slf4j/slf4j-simple {:mvn/version "2.0.9"}}
+                      :main-opts ["-m" "antq.core"]}}}
