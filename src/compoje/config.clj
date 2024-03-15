@@ -2,10 +2,9 @@
   (:require [babashka.fs :as fs]
             [clj-yaml.core :as yaml]
             [clojure.java.io :as io]
-            [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clojure.walk :as walk]
-            [clojure.string :as str]
             [compoje.utils :as u])
   (:import [java.io IOException]))
 

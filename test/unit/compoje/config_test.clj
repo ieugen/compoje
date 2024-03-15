@@ -10,7 +10,7 @@
                 "test/unit/compoje/config_test.clj")]
       (is (= hash "test/unit/compoje"))))
 
-  (testing "load config from file"
+  (testing "load config from data (file)"
     (let [file (char-array "compoje:
                               docker:
                                 stack: nginx
@@ -24,9 +24,7 @@
                                  :values (ordered-map
                                           {:simple 2
                                            :complex "3"})})]
-      (is (= expected res))))
-
-  )
+      (is (= expected res)))))
 
 
 

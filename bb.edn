@@ -3,11 +3,11 @@
 ;; Type bb <task-name> or bb run <task-name> to run a task
 {:min-bb-version "1.3.183"
  :deps {compoje/compoje {:local/root "."}
-        dev.weavejester/cljfmt {:mvn/version "0.11.2"}
+        dev.weavejester/cljfmt {:mvn/version "0.12.0"}
         ;; we need portal here for dev
         ;; Calva Babashka can't choose alias that includes portal
         ;; perhaps we can start repl and use Calva connect ?!
-        djblue/portal {:mvn/version "0.49.1"}}
+        djblue/portal {:mvn/version "0.52.2"}}
  :paths ["dev"]
  :tasks {:requires ([compoje.cli :as cli]
                     [cljfmt.main :as fmt])

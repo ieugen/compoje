@@ -14,8 +14,7 @@
    - https://github.com/ansible/ansible/blob/devel/lib/ansible/parsing/vault/__init__.py
    "
   (:require [clj-yaml.core :as yaml]
-            [clojure.string :as str]
-            [hyperfiddle.rcf :refer [tests]])
+            [clojure.string :as str])
   (:import (java.nio.charset StandardCharsets)
            (java.util Arrays)
            (javax.crypto Mac Cipher SecretKeyFactory SecretKey)
@@ -63,20 +62,23 @@
       (= 4 parts-count)
       (assoc :vault-id-label (nth parts 3)))))
 
-(tests
- "ansible vault parse header"
+^:rct/test
+(comment
 
- (parse-header nil) :throws clojure.lang.ExceptionInfo
+  "ansible vault parse header"
+  (try (parse-header nil)
+       (catch clojure.lang.ExceptionInfo _e :exception)) ;=> :exception
 
- (parse-header "invalid-format") :throws clojure.lang.ExceptionInfo
+  (try (parse-header "invalid-format")
+       (catch clojure.lang.ExceptionInfo _e :exception)) ;=> :exception
 
- (parse-header "$ANSIBLE_VAULT;1.1;AES256") :=
- {:format-id "$ANSIBLE_VAULT", :format-version "1.1", :cipher "AES256"}
+  (parse-header "$ANSIBLE_VAULT;1.1;AES256") ;=>
+ ; {:format-id "$ANSIBLE_VAULT", :format-version "1.1", :cipher "AES256"}
 
- (parse-header "$ANSIBLE_VAULT;1.2;AES256;vault-id-label") :=
- {:format-id "$ANSIBLE_VAULT", :format-version "1.2", :cipher "AES256", :vault-id-label "vault-id-label"}
+  (parse-header "$ANSIBLE_VAULT;1.2;AES256;vault-id-label") ;=>
+ ; {:format-id "$ANSIBLE_VAULT", :format-version "1.2", :cipher "AES256", :vault-id-label "vault-id-label"}
 
- )
+  )
 
 
 (defn hexlify
@@ -110,12 +112,11 @@
         (aset-int byte-data i bv)))
     (byte-array byte-data)))
 
-(tests
+^:rct/test
+(comment
 
- (hexlify (bytes (byte-array [0xb9 0x01 0xef]))) := "B901EF"
-
-
- )
+  (hexlify (bytes (byte-array [0xb9 0x01 0xef]))) ;=> "B901EF"
+  )
 
 (comment
 
@@ -231,14 +232,17 @@
           (- block-size-bytes buffer-size-bytes)
           :else (mod buffer-size-bytes block-size-bytes))))
 
-(tests
+^:rct/test
+(comment
 
- (padded-buffer-size 48 0) := 0
- (padded-buffer-size 48 32) := 48
- (padded-buffer-size 48 48) := 48
- (padded-buffer-size 48 49) := 96
+  (padded-buffer-size 48 0) ;=> 0
+  (padded-buffer-size 48 32) ;=> 48
+  (padded-buffer-size 48 48) ;=> 48
+  (padded-buffer-size 48 49) ;=> 96
 
- (padding-value 48 36) := 12)
+  (padding-value 48 36) ;=> 12
+
+  )
 
 (defn valid-block-size?
   "Throw exception if block size in bits:
@@ -260,14 +264,22 @@
   [block-size-bits]
   (/ block-size-bits 8))
 
-(tests
+^:rct/test
+(comment
 
- (valid-block-size? 16) := true
+  (valid-block-size? 16) ;=> true
 
- (valid-block-size? -1) :throws clojure.lang.ExceptionInfo
- (valid-block-size? 0) :throws clojure.lang.ExceptionInfo
- (valid-block-size? 15) :throws clojure.lang.ExceptionInfo
- (valid-block-size? 2041) :throws clojure.lang.ExceptionInfo)
+  (try
+    (valid-block-size? -1)
+    (catch clojure.lang.ExceptionInfo _e :exception)) ;=> :exception
+  (try (valid-block-size? 0)
+       (catch clojure.lang.ExceptionInfo _e :exception)) ;=> :exception
+  (try (valid-block-size? 15)
+       (catch clojure.lang.ExceptionInfo _e :exception)) ;=> :exception
+  (try (valid-block-size? 2041)
+       (catch clojure.lang.ExceptionInfo _e :exception)) ;=> :exception
+
+  )
 
 (defn pkcs7-pad
   "Inspired from docs:
@@ -309,11 +321,14 @@
             ;; byte is padding - continue with next byte
             (recur (inc i))))))))
 
-(tests
+^:rct/test
+(comment
 
- (let [s "my_encrypted_var: \"Eugen - Netdava\"\n"
-       s-bytes (.getBytes s StandardCharsets/UTF_8)]
-   (has-pkcs7-padding? s-bytes)) := (byte 12))
+  (let [s "my_encrypted_var: \"Eugen - Netdava\"\n"
+        s-bytes (.getBytes s StandardCharsets/UTF_8)]
+    (has-pkcs7-padding? s-bytes)) ;=> 12
+
+  )
 
 (defn pkcs7-unpad
   "Removes pkcs7 padding from a given block size (in bits) and a byte array"
@@ -339,8 +354,6 @@
   (let [s "my_encrypted_var: \"Eugen - Netdava\"\n"
         s-bytes (.getBytes s StandardCharsets/UTF_8)]
     (String. (pkcs7-unpad 384 s-bytes)))
-
-
   )
 
 (defn decrypt

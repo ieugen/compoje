@@ -192,17 +192,26 @@
   (log/merge-config! {:output-fn clog/output-fn
                       :min-level (verbosity->log-level verbosity)}))
 
+(defn cli-config->context
+  "Build a context with cli specific options."
+  [config-file set-args]
+  (let [config-file (fs/file config-file)
+        template-dir (config/config-name->template-dir config-file)
+        config (config/load-config! config-file set-args)
+        compose-file (or (get-in config [:docker :compose-file])
+                         (fs/path template-dir "stack.generated.yml"))]
+    (context/config->context config {:config-file config-file
+                                     :template-dir template-dir
+                                     :docker {:compose-file compose-file}})))
+
 (defn deploy
   [parsed context]
   (let [{:keys [config-file options arguments]} parsed
         {dry-run :dry-run set-args :set} options
-        config-file (fs/file config-file)
-        template-dir (config/config-name->template-dir config-file)
-        config (config/load-config! config-file set-args)
-        provider-results (providers/provide-secrets
-                          (assoc config :template-dir template-dir))
-        file-ctx (context/load-context! template-dir config provider-results)
-        context (context/final-context file-ctx context)
+        ctx (cli-config->context config-file set-args)
+        {:keys [template-dir config-file]} ctx
+        provider-results (providers/provide-secrets ctx)
+        context (context/final-context ctx provider-results)
         docker (:docker context)
         template-file (str (fs/file template-dir "stack.tpl.yml"))
         contents (render/render template-file context {})]

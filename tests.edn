@@ -5,5 +5,5 @@
           :test-paths ["test/integration"]}]
  :reporter [kaocha.report/documentation
             kaocha.report/tap]
- :plugins [:kaocha.plugin/profiling
+ :plugins [#_:kaocha.plugin/profiling
            :kaocha.plugin/capture-output]}

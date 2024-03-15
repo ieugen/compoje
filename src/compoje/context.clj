@@ -3,7 +3,9 @@
   (:require [clojure.string :as str]
             [clojure.tools.logging :as log]
             [compoje.utils :as u]
-            [babashka.fs :as fs]))
+            [compoje.config :as config]
+            [babashka.fs :as fs]
+            [compoje.context :as context]))
 
 ;; TODO: consider whether we should use directory name as default stack name
 #_(defn context-with-stack-name
@@ -31,13 +33,6 @@
        ;; TODO: some context validations
      ctx)))
 
-(defn stack-name
-  "Stack name from context."
-  [ctx]
-  (let [stack (get-in ctx [:docker :stack])]
-    (assert stack "Stack should not be nil")
-    stack))
-
 (defn load-context!
   "Builds context as a map of values and returns it.
    Merges in values from cli to replace values from files.
@@ -52,9 +47,27 @@
                                       :template-dir template-dir})]
     context))
 
+(defn config->context
+  "Builds the initial context as a map of values and returns it.
+   This context does not contain data from providers.
+   Return a map."
+  [config & more]
+  (let [cwd (System/getProperty "user.dir")
+        {:keys [values secrets]} config
+        context (u/deep-merge {:values values
+                               :secrets secrets
+                               :work-dir cwd} more)]
+    context))
+
+(defn enhanced-context
+  "Enhance the context with provider data"
+  [context provider-data]
+  (u/deep-merge context provider-data))
+
+
 (comment
 
-  (load-context! "data/stacks/nginx" {} {})
+  (config->context "data/stacks/nginx" {} {})
 
   (u/deep-merge {} {:a "b"})
   (u/deep-merge {} {:a "b"} {:c "d"}))

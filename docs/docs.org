@@ -80,10 +80,15 @@ compoje:
         memory: 20M
 #+END_SRC
 
+** TODO: Document config keys
+
 *** Compoje context
 
-Compoje builds a 'context' from configuration, cli args and providers.
+Compoje builds a 'context' from configuration, cli args.
+It enhances the context with data from providers.
 It uses this context for rendering the template.
+
+*** TODO: Document context keys
 
 *** Compoje stack file
 
@@ -114,6 +119,8 @@ Examples of providers are:
 
 Compoje comes with some built-in providers.
 We might extend compoje to allow third party providers.
+
+** TODO: Document provider keys
 
 *** File
 
