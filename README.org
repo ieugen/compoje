@@ -80,7 +80,7 @@ In your *deps.edn* file you should add an alias used to call compoje in your pro
 
 ** Ideas
 
-- Try to implement/follow Compose specification.
+- Try to implement/follow [[https://github.com/compose-spec/compose-spec][Compose specification]]
 - Use yaml format since to appeal to a broader audience.
 - Read compoje configuration from the template file - under **x-compoje** key since compose will ignore keys that start with "x-".
 See https://docs.docker.com/compose/compose-file/11-extension/ .

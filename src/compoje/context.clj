@@ -1,11 +1,8 @@
 (ns compoje.context
   "Functions to manage context"
-  (:require [clojure.string :as str]
+  (:require [babashka.fs :as fs]
             [clojure.tools.logging :as log]
-            [compoje.utils :as u]
-            [compoje.config :as config]
-            [babashka.fs :as fs]
-            [compoje.context :as context]))
+            [compoje.utils :as u]))
 
 ;; TODO: consider whether we should use directory name as default stack name
 #_(defn context-with-stack-name

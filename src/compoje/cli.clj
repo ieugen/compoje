@@ -1,6 +1,8 @@
 (ns compoje.cli
   "ns to offer a CLI interface for compoje features."
-  (:require [clojure.string :as str]
+  (:require [babashka.fs :as fs]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.tools.cli :as cli]
             [compoje.config :as config]
             [compoje.context :as context]
@@ -10,9 +12,7 @@
             [compoje.providers.vault :as vault-p]
             [compoje.render :as render]
             [compoje.utils :as u]
-            [taoensso.timbre :as log]
-            [babashka.fs :as fs]
-            [clojure.java.io :as io])
+            [taoensso.timbre :as log])
   (:gen-class))
 
 (def main-opts
