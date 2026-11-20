@@ -17,7 +17,7 @@ Integration tests (test/integration/vault_test.clj) start `hashicorp/vault` via 
 
 ## Layout
 - src/compoje/cli.clj: entry point `compoje.cli/main`; tools.cli parsing in two stages (global opts, then action opts). Only the `deploy` action exists.
-- config.clj: reads a YAML stack file and returns the map under its top-level `compoje:` key, deep-merged with `--set` args.
+- config.clj: reads a YAML stack file and returns the map under its top-level `x-compoje:` key (legacy `compoje:` still read, with a warning), deep-merged with `--set` args.
 - context.clj: builds the render context (`:values`, `:secrets`, `:work-dir`, `:template-dir`, `:docker`).
 - providers.clj: `SecretsProvider` protocol + registry atom; providers/vault.clj, providers/ansible_vault.clj (pure-Clojure decrypt). providers/file.clj is a stub.
 - render.clj: Selmer rendering plus custom tags `file-hash`, `file-path`, `to-yaml` and the filter `hash-file`.
@@ -34,7 +34,7 @@ Selmer is called with `{:tag-open \< :tag-close \>}`, so the delimiters are NOT 
 
 Rendering runs inside `without-escaping`. Paths in tags are relative to the template dir.
 
-A stack file is a compose file plus a `compoje:` key (docker, providers, secrets, values). The whole file goes through Selmer, and the `compoje:` section is read as YAML.
+A stack file is a compose file plus an `x-compoje:` key (docker, providers, secrets, values). The whole file goes through Selmer, and the `x-compoje:` section is read as YAML. The section stays in the rendered output; the `x-` prefix is what lets `docker stack deploy` accept it. Validate a rendered stack with `docker stack config -c <file>`.
 
 ## Conventions
 - Babashka is the production runtime, so code must stay bb-compatible: no deps or JVM features bb lacks (see the data.json exclusion note in deps.edn). Green JVM tests are not enough; also verify with `bb test-bb` and `bb compoje deploy --dry-run example-stacks/nginx/stack.tpl.yml`.

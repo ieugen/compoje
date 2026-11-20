@@ -36,13 +36,15 @@ Old:
 
 Compoje configuration can be considered a map of keys and values.
 Some values can be maps as well.
-The options are under 'compoje' key.
+The options are under the 'x-compoje' key.
+The x- prefix makes it a compose extension field, so the rendered stack stays a valid compose file.
+A legacy 'compoje' key is still read, with a deprecation warning, but docker stack deploy rejects it.
 
 Currently it looks like this:
 
 #+BEGIN_SRC yaml
-# Configuration options are kept under compoje key
-compoje:
+# Configuration options are kept under x-compoje key
+x-compoje:
   # We have a docker deployment options under docker key:
   docker:
     stack: stack-name
@@ -92,12 +94,12 @@ It uses this context for rendering the template.
 
 *** Compoje stack file
 
-A compoje stack file is Docker compose stack file + a **compoje:** key which holds the compoje configuration.
+A compoje stack file is Docker compose stack file + an **x-compoje:** key which holds the compoje configuration.
 Compoje configuration is used to build the context but it is not part of redering.
 
 Bellow is an example of how this could look like:
 #+BEGIN_SRC yaml
-compoje:
+x-compoje:
   docker:
     stack: my-stack
     context: my-remote-swarm

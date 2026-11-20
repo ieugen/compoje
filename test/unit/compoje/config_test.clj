@@ -11,7 +11,7 @@
       (is (= hash "test/unit/compoje"))))
 
   (testing "load config from data (file)"
-    (let [file (char-array "compoje:
+    (let [file (char-array "x-compoje:
                               docker:
                                 stack: nginx
                               values:
@@ -33,3 +33,8 @@
   (run-tests)
 
   )
+
+(deftest legacy-compoje-key-test
+  (testing "a legacy top-level compoje key is still read"
+    (is (= {:docker {:stack "nginx"}}
+           (c/file->config! (char-array "compoje:\n  docker:\n    stack: nginx\n"))))))

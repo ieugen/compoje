@@ -13,12 +13,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - More documentation in docs/docs.org; AGENTS.md / CLAUDE.md for coding agents.
 
 ### Changed
-- Configuration lives in the stack template itself, under a top-level `compoje:` key (docker, providers, secrets, values), and is read as YAML. The separate `compoje.edn` file is no longer used.
+- Configuration lives in the stack template itself, under a top-level `x-compoje:` key (docker, providers, secrets, values), and is read as YAML. The separate `compoje.edn` file is no longer used.
 - Upgraded vault client from `amperity/vault-clj` 1.x to `com.amperity/vault-clj` 2.x.
 - Dependency upgrades: Clojure 1.12, timbre 6.6, selmer 1.12.62, and others; added clj-yaml and malli.
 - Added antq (`clojure -M:outdated`) for dependency checks.
 
 ### Fixed
+- `deploy` was rejected by Docker ("additional property 'compoje' is not allowed") because the config section stayed in the rendered stack. The key is now `x-compoje:`, a compose extension field. A legacy `compoje:` key is still read, with a deprecation warning.
 - `deploy` crashed with a ClassCastException while building the context (`config->context` did not apply its extra maps to `deep-merge`).
 - Integration tests work with Docker 29+: testcontainers pinned to 1.21.4 (the 1.17.6 version that clj-test-containers 0.7.4 pulls in is too old).
 

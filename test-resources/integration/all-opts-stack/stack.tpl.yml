@@ -1,4 +1,4 @@
-compoje:
+x-compoje:
   docker:
     stack: redis-example
   providers: []

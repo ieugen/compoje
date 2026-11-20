@@ -43,7 +43,10 @@
    config can be any source clojure.java.io/reader accepts:
    - String, URI, InputStream, File, etc.
 
-   Return the data under compoje key.
+   Return the data under the x-compoje key.
+   The x- prefix makes it a compose extension field, so the rendered stack
+   is still a valid compose file for docker stack deploy.
+   A legacy top-level compoje key is still read, with a warning.
 
    If config is nil, return nil.
    On ^IOException print warning and return nil."
@@ -51,7 +54,13 @@
   (when config
     (try
       (let [cfg (read-config-yaml config)]
-        (get cfg :compoje))
+        (if (contains? cfg :x-compoje)
+          (get cfg :x-compoje)
+          (when (contains? cfg :compoje)
+            (u/println-err
+             "WARN: top-level 'compoje:' key is deprecated, rename it to 'x-compoje:'."
+             "docker stack deploy rejects unknown top-level keys.")
+            (get cfg :compoje))))
       (catch IOException e
         (u/println-err
          "WARN: Error reading config" (.getMessage e))))))

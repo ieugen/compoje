@@ -1,5 +1,27 @@
-version: '3.9'
+x-compoje:
+  docker:
+    stack: redis-example
+  providers: []
+    # - name: my-vault
+    #   type: compoje.providers.vault/vault
+    #   addr: "http://localhost:8200"
+  secrets: []
+    # - name: cert-key
+    #   provider: my-vault
+    #   local-path: "nginx/cert.key"
+    #   spit-key: cert.key
+    #   mount-path: "secret"
+    #   secret-path: nginx
+    # - name: cert
+    #   provider: my-vault
+    #   local-path: "nginx/cert.key"
+    #   spit-key: cert.crt
+    #   mount-path: "secret"
+    #   secret-path: nginx
+  values:
+    resource-reservations-mem: 128m
 
+version: '3.9'
 services:
   nginx:
     image: docker.io/nginx:stable
@@ -20,7 +42,6 @@ services:
     configs:
       - source: nginx_cfg
         target: /etc/nginx/conf.d/default.conf
-
 
 networks:
   host_network:
