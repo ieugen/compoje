@@ -43,3 +43,4 @@ A stack file is a compose file plus a `compoje:` key (docker, providers, secrets
 - YAML is parsed with clj-yaml (YAML 1.1); `config/unlazify` turns lazy seqs into vectors.
 - `*.generated.yml` files are render output. Regenerate them, don't hand-edit them.
 - Never commit decrypted secrets (e.g. a local `decrypted.yml`).
+- Record user-visible changes under `## [Unreleased]` in CHANGELOG.md.
