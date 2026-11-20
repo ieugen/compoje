@@ -51,9 +51,9 @@
   [config & more]
   (let [cwd (System/getProperty "user.dir")
         {:keys [values secrets]} config
-        context (u/deep-merge {:values values
-                               :secrets secrets
-                               :work-dir cwd} more)]
+        context (apply u/deep-merge {:values values
+                                     :secrets secrets
+                                     :work-dir cwd} more)]
     context))
 
 (defn enhanced-context

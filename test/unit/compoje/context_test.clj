@@ -10,3 +10,14 @@
       (is (= context {:template-dir "/tmp/a"
                       :secrets {:b 2}
                       :values {:a 1}})))))
+
+(deftest config->context-test
+  (testing "config->context deep-merges extra maps over the config"
+    (let [context (c/config->context {:values {:a 1} :secrets []}
+                                     {:template-dir "/tmp/a"}
+                                     {:docker {:compose-file "/tmp/a/stack.generated.yml"}})]
+      (is (= {:values {:a 1}
+              :secrets []
+              :template-dir "/tmp/a"
+              :docker {:compose-file "/tmp/a/stack.generated.yml"}}
+             (dissoc context :work-dir))))))

@@ -19,6 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added antq (`clojure -M:outdated`) for dependency checks.
 
 ### Fixed
+- `deploy` crashed with a ClassCastException while building the context (`config->context` did not apply its extra maps to `deep-merge`).
 - Integration tests work with Docker 29+: testcontainers pinned to 1.21.4 (the 1.17.6 version that clj-test-containers 0.7.4 pulls in is too old).
 
 ## [0.1] - 2023-08-18

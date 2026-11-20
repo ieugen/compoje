@@ -1,6 +1,6 @@
 # AGENTS.md
 
-compoje is a templating and deploy tool for Docker Swarm stacks, written in Clojure. It runs on both the JVM (deps.edn) and Babashka (bb.edn). It renders a compose-file template with Selmer, using a context built from config, CLI `--set` args and secret providers (HashiCorp Vault, ansible-vault). It then shells out to `docker stack deploy`. Configs and secrets get content hashes in their names, so changing a file creates a new immutable Swarm object.
+compoje is a templating and deploy tool for Docker Swarm stacks, written in Clojure. **compoje is run with Babashka** (`bb compoje ...`, as a bb task here or in users' bb.edn); the JVM (deps.edn) is used for development, the REPL and the kaocha tests. It renders a compose-file template with Selmer, using a context built from config, CLI `--set` args and secret providers (HashiCorp Vault, ansible-vault). It then shells out to `docker stack deploy`. Configs and secrets get content hashes in their names, so changing a file creates a new immutable Swarm object.
 
 User docs: README.org, docs/docs.org (Org-mode, not Markdown).
 
@@ -37,7 +37,8 @@ Rendering runs inside `without-escaping`. Paths in tags are relative to the temp
 A stack file is a compose file plus a `compoje:` key (docker, providers, secrets, values). The whole file goes through Selmer, and the `compoje:` section is read as YAML.
 
 ## Conventions
-- Code must stay Babashka-compatible: no deps or JVM features bb lacks (see the data.json exclusion note in deps.edn).
+- Babashka is the production runtime, so code must stay bb-compatible: no deps or JVM features bb lacks (see the data.json exclusion note in deps.edn). Green JVM tests are not enough; also verify with `bb test-bb` and `bb compoje deploy --dry-run example-stacks/nginx/stack.tpl.yml`.
+- bb ships built-in fs, process, cheshire, clj-yaml, selmer, timbre and tools.cli. At runtime those built-in versions are used, not the deps.edn versions, so upgrading them in deps.edn mainly affects JVM dev/tests.
 - Tests: kaocha suites under test/unit and test/integration; namespaces are prefixed `unit.` / `integration.`. Rich-comment-tests (`^:rct/test` comment blocks in src/, currently in providers/ansible_vault.clj) run via test/unit/rct_test.clj.
 - Logging: timbre in cli.clj, logging.clj and deploy/docker.clj; clojure.tools.logging elsewhere.
 - YAML is parsed with clj-yaml (YAML 1.1); `config/unlazify` turns lazy seqs into vectors.
