@@ -1,6 +1,6 @@
 {:paths ["src" "resources"]
  :deps {babashka/fs {:mvn/version "0.5.34"}
-        babashka/process {:mvn/version "0.5.22"}
+        babashka/process {:mvn/version "0.6.25"}
         cheshire/cheshire {:mvn/version "5.13.0"}
         clj-commons/clj-yaml {:mvn/version "1.0.30"}
         com.amperity/vault-clj {:mvn/version "2.3.594"}
