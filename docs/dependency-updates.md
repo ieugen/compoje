@@ -36,7 +36,7 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
 | 10 | [x]    | selmer/selmer                                            | deps                        | 1.12.62 → 1.13.5    | only breaking change is the `script` tag (unused). JVM render of nginx + all-opts-stack byte-identical between 1.12.62 and 1.13.5. kaocha 11/36 green, bb green, dry-run OK (bb uses built-in selmer) |
 | 11 | [x]    | org.clojure/tools.cli                                    | deps                        | 1.1.230 → 1.4.256   | 1.4 deprecates `:in-order true` for `:subcommand :explicit`; kept `:in-order` (no warning, same result; old bb per `:min-bb-version` lacks `:subcommand`). JVM parse of -v -v, --set x2, --stack, --help, bad opt OK; bb `--set` override renders 256m. kaocha 12/37, bb green, dry-run OK |
 | 12 | [x]    | metosin/malli                                            | deps                        | 0.17.0 → 0.20.3     | not used in code yet; pre-1.0. Breaking: 0.18 `parse` Tag records + JSON-Schema `.` separator, 0.19 json-transformer enum inference (none apply). `malli.core` validate works on bb + JVM. kaocha 12/37, bb green, dry-run OK |
-| 13 | [ ]    | dev.weavejester/cljfmt                                   | bb.edn                      | 0.13.0 → 0.16.6     | run `bb fmt check`; keep reformatting separate |
+| 13 | [x]    | dev.weavejester/cljfmt                                   | bb.edn                      | 0.13.0 → 0.16.6     | `bb fmt` was broken on 0.13.0 under bb ("Not implemented in the babashka version of cljfmt yet"); works on 0.16.6. 0.15 renamed alignment options, 0.16 ignores .clj config (no cljfmt config in repo). `bb fmt check` now flags 11 files; reformatting is a separate follow-up commit. kaocha 12/37, bb green, dry-run OK |
 | 14 | [ ]    | djblue/portal                                            | :dev                        | 0.58.5 → 0.69.2     | keep `org.clojure/data.json` exclusion; check `clojure -M:dev` |
 | 15 | [ ]    | babashka/process                                         | deps                        | 0.5.22 → 0.6.25     | `shell` + ex-data `:type` in deploy/docker.clj |
 | 16 | [ ]    | cheshire/cheshire                                        | deps                        | 5.13.0 → 6.2.1      | major; Jackson upgrade; providers/vault.clj |
@@ -54,6 +54,8 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
   files predate the config-in-stack-file change and are stale. Not caused by any bump; needs a design
   decision. **Fixed:** key renamed to `x-compoje:` (legacy `compoje:` still read with a warning);
   both example stacks pass `docker stack config`, and the stale generated files were regenerated.
+- Step 13: with cljfmt 0.16.6, `bb fmt check` reports 11 files (src + test) with incorrect formatting,
+  mostly consecutive blank lines and indentation. Run `bb fmt fix` as its own commit, separate from the bump.
 
 Not reported by antq (already current): kaocha 1.91.1392, clj-test-containers 0.7.4, slf4j-timbre 0.4.1, bb spec.alpha git dep.
 
