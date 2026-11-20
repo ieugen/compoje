@@ -17,7 +17,7 @@
                               ;; 0.7.4 pulls testcontainers 1.17.6, too old for Docker >= 29 (min API 1.40)
                               org.testcontainers/testcontainers {:mvn/version "1.21.4"}
                               com.fzakaria/slf4j-timbre {:mvn/version "0.4.1"}
-                              djblue/portal {:mvn/version "0.58.5"
+                              djblue/portal {:mvn/version "0.69.2"
                                              ;; data.json > 2.4.0 does not work with bb - definterace
                                              :exclusions [org.clojure/data.json]}
                               org.slf4j/jcl-over-slf4j {:mvn/version "2.0.20"}
