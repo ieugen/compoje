@@ -15,13 +15,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - Configuration lives in the stack template itself, under a top-level `x-compoje:` key (docker, providers, secrets, values), and is read as YAML. The separate `compoje.edn` file is no longer used.
 - Upgraded vault client from `amperity/vault-clj` 1.x to `com.amperity/vault-clj` 2.x.
-- Dependency upgrades: Clojure 1.12, timbre 6.6, selmer 1.12.62, and others; added clj-yaml and malli.
+- Dependency upgrades (all current as of 2026-11-21): Clojure 1.12.7, babashka/fs 0.5.34, babashka/process 0.6.25, cheshire 6.2.1, clj-yaml 1.0.30, vault-clj 2.3.594, timbre 6.8.0, json-schema 0.4.8, malli 0.20.3, selmer 1.13.5, tools.cli 1.4.256, tools.logging 1.3.2. Added clj-yaml and malli.
+- Dev/test dependency upgrades: testcontainers 2.0.5, slf4j 2.0.20, rich-comment-tests v1.0.5, portal 0.69.2, cljfmt 0.16.6 (fixes `bb fmt`, which failed under babashka on 0.13.0).
 - Added antq (`clojure -M:outdated`) for dependency checks.
 
 ### Fixed
 - `deploy` was rejected by Docker ("additional property 'compoje' is not allowed") because the config section stayed in the rendered stack. The key is now `x-compoje:`, a compose extension field. A legacy `compoje:` key is still read, with a deprecation warning.
 - `deploy` crashed with a ClassCastException while building the context (`config->context` did not apply its extra maps to `deep-merge`).
-- Integration tests work with Docker 29+: testcontainers pinned to 1.21.4 (the 1.17.6 version that clj-test-containers 0.7.4 pulls in is too old).
+- Integration tests work with Docker 29+: testcontainers pinned to 2.0.5 (the 1.17.6 version that clj-test-containers 0.7.4 pulls in is too old).
 
 ## [0.1] - 2023-08-18
 

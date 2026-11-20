@@ -41,7 +41,7 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
 | 14 | [x]    | djblue/portal                                            | :dev                        | 0.58.5 → 0.69.2     | 0.67 binds to localhost by default (was 0.0.0.0). Exclusion kept; data.json 2.4.0 still on :dev path. `clojure -M:dev` starts/stops Portal on localhost. 0.69.2 was 7 days old when bumped. kaocha 12/37, bb green, dry-run OK |
 | 15 | [x]    | babashka/process                                         | deps                        | 0.5.22 → 0.6.25     | no breaking changes (exec resolution, :discard redirect, leak + reflection fixes). `shell` failure ex-data (`:type :babashka.process/error`, `:cmd`, string `:err`) identical on JVM 0.6.25 and bb built-in. kaocha 12/37, bb green, dry-run OK |
 | 16 | [x]    | cheshire/cheshire                                        | deps                        | 5.13.0 → 6.2.1      | major, but only breaking change is Windows pretty-print line breaks (compoje does not pretty-print). jackson-core/smile/cbor 2.17.0 → 2.21.8, no jackson-databind on path. JSON round-trip OK; kaocha 12/37 incl. Vault integration, bb green (built-in cheshire), dry-run OK |
-| 17 | [ ]    | org.testcontainers/testcontainers                        | :dev, :test                 | 1.21.4 → 2.0.5      | major; clj-test-containers 0.7.4 may not support 2.x |
+| 17 | [x]    | org.testcontainers/testcontainers                        | :dev, :test                 | 1.21.4 → 2.0.5      | major (JUnit 4 removed, modules renamed); clj-test-containers 0.7.4 only uses core classes and works. 2.0.5 overrides the transitive 1.17.6. kaocha 12/37 incl. Vault integration, bb green, dry-run OK |
 
 ### Found along the way
 
@@ -62,5 +62,5 @@ Not reported by antq (already current): kaocha 1.91.1392, clj-test-containers 0.
 
 ## When finished
 
-- Rerun antq; only `[!]` rows should remain outdated.
-- Add a consolidated "Dependency upgrades" entry to CHANGELOG.md under `[Unreleased] → Changed`.
+Completed 2026-11-21: all 17 rows done, none held back. `clojure -M:outdated` reports
+"All dependencies are up-to-date." CHANGELOG.md `[Unreleased] → Changed` has the consolidated entry.
