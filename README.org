@@ -58,17 +58,24 @@ Once that is done you can deploy a compoje stack:
 
 #+BEGIN_SRC shell
 
-# display help
+# display help (also works per command: bb compoje deploy --help)
 bb compoje --help
 
-# Deploy a stack from a file overriding some options
-bb compoje deploy --set docker.stack=my-stack example-stacks/nginx/compoje.edn
+# Render and show the stack and the docker command, without deploying
+bb compoje deploy --dry-run example-stacks/nginx/stack.tpl.yml
+
+# Deploy a stack, overriding the stack name from the file
+bb compoje deploy --stack my-stack example-stacks/nginx/stack.tpl.yml
 #+END_SRC
 
 #+BEGIN_SRC shell
-Deploy using: docker  stack deploy  --compose-file /home/ieugen/proiecte/clojure/compoje/example-stacks/nginx/stack.generated.yml my-stack
+Deploy using: docker stack deploy --with-registry-auth --resolve-image always --compose-file /home/ieugen/proiecte/clojure/compoje/example-stacks/nginx/stack.generated.yml my-stack
 Creating service my-stack_nginx
 #+END_SRC
+
+Deploy options, lowest precedence first: built-in defaults, the =x-compoje:= config in the stack file,
+=--set path.in.config=value= overrides, then flags like =--stack=, =--context=, =--prune=,
+=--resolve-image= and =--[no-]with-registry-auth=.
 
 *** Using compoje via clojure deps.edn
 

@@ -24,7 +24,9 @@
   ([file-ctx cli-ctx & other]
    (log/debug "Merge" file-ctx cli-ctx)
    (let [template-dir (:template-dir file-ctx)
-         file (str (fs/normalize (fs/absolutize (fs/path template-dir "stack.generated.yml"))))
+         file (or (get-in file-ctx [:docker :compose-file])
+                  (fs/path template-dir "stack.generated.yml"))
+         file (str (fs/normalize (fs/absolutize file)))
          ctx (u/deep-merge file-ctx cli-ctx {:docker {:compose-file file}})
          ctx (apply u/deep-merge ctx other)]
        ;; TODO: some context validations
@@ -45,16 +47,14 @@
     context))
 
 (defn config->context
-  "Builds the initial context as a map of values and returns it.
+  "Builds the initial context from the x-compoje config and returns it.
+   Keeps the whole config (docker, providers, secrets, values), so docker
+   options and provider definitions reach deploy.
    This context does not contain data from providers.
    Return a map."
   [config & more]
-  (let [cwd (System/getProperty "user.dir")
-        {:keys [values secrets]} config
-        context (apply u/deep-merge {:values values
-                                     :secrets secrets
-                                     :work-dir cwd} more)]
-    context))
+  (let [cwd (System/getProperty "user.dir")]
+    (apply u/deep-merge (assoc config :work-dir cwd) more)))
 
 (defn enhanced-context
   "Enhance the context with provider data"

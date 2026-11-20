@@ -1,9 +1,7 @@
 (ns compoje.cli
-  "ns to offer a CLI interface for compoje features."
+  "Command line interface for compoje, built on lambdaisland/cli."
   (:require [babashka.fs :as fs]
-            [clojure.java.io :as io]
             [clojure.string :as str]
-            [clojure.tools.cli :as cli]
             [compoje.config :as config]
             [compoje.context :as context]
             [compoje.deploy.docker :as docker]
@@ -12,179 +10,18 @@
             [compoje.providers.vault :as vault-p]
             [compoje.render :as render]
             [compoje.utils :as u]
+            [lambdaisland.cli :as cli]
+            [lambdaisland.cli.cmdspec :as cmdspec]
             [taoensso.timbre :as log])
   (:gen-class))
-
-(def main-opts
-  [["-v" nil "Verbosity level"
-    :id :verbosity
-    :default 0
-    :update-fn inc]
-   ["d" "--deploy-driver" "Use a deployment driver. Defaults to :docker"
-    :default :docker]
-   ["-h" "--help"]])
-
-(def deploy-opts
-  "Deploy specific opts.
-   Includes options to be passed down to docker client."
-  [[nil "--stack STACK"
-    "Specify the name of the stack. Ovewrite value from file."]
-   [nil "--prune" "Prune services that are no longer referenced."]
-   [nil "--resolve-image STRATEGY"
-    "Query the registry to resolve image digest and supported platforms (always, changed, never)"
-    :default "always"]
-   [nil "--with-registry-auth"
-    "Send registry authentication details to Swarm agents"
-    :default true]
-   [nil "--dry-run" "Dry run. Render stack. Do not deploy."
-    :default false]
-   ["-s" "--set VALUE" "Overwrite a context value using syntax: --set path.from.contex=value"
-    :multi true
-    :default []
-    :update-fn conj]
-   ;; --context is global option for docker
-   [nil "--context CONTEXT"
-    "Use this docker context. See https://docs.docker.com/engine/context/working-with-contexts/"]
-   ["-h" "--help"]])
-
-(def valid-actions #{"render" "deploy"})
-
-(defn usage
-  ([options-summary]
-   (->> ["This is compoje program. Templates for docker swarm stacks."
-         ""
-         "Usage: compoje [options] action [action-specific-options]"
-         ""
-         "Options:"
-         options-summary
-         ""
-         "Actions:"
-        ;;  "  render     Render a stack template."
-         "  deploy     Deploy a stack template to a swarm cluster."
-         ""
-         "Please refer to the manual page for more information."]
-        (str/join \newline)))
-  ([action global-options options-summary]
-   (->> ["This is compoje program. Templates for docker swarm stacks."
-         ""
-         (str "Usage: compoje [options] " action " [" action "-options] path-to-stack")
-         ""
-         "Options:"
-         global-options
-         ""
-         "Actions:"
-        ;;  "  render     Render a stack template."
-         "  deploy     Deploy a stack template to a swarm cluster."
-         ""
-         (str action " options")
-         options-summary
-         "Please refer to the manual page for more information."]
-        (str/join \newline))))
-
-(defn error-msg [errors]
-  (str "The following errors occurred while parsing your command:\n\n"
-       (str/join \newline errors)))
-
-(defn cli-opts->context
-  "Build context from global options.
-   Will be deep merged and overwrite values in "
-  [options]
-  (let [compoje (select-keys options [:deploy-driver])]
-    {:compoje compoje}))
-
-(defn validate-args
-  "Validate command line arguments.
-   Either return a map indicating the program should exit
-   (with an error message, and optional ok status),
-   or a map indicating the action the program should take
-   and the options provided."
-  [args]
-  (let [parsed (cli/parse-opts args main-opts :in-order true)
-        {:keys [options arguments errors summary]} parsed
-        action (first arguments)]
-    (cond
-      (:help options) ; help => exit OK with usage summary
-      {:exit-message (usage summary) :ok? true}
-
-      errors
-      {:exit-message (error-msg errors)}
-
-      (valid-actions action)
-      (assoc parsed
-             :action action
-             :context (cli-opts->context options))
-
-      :else
-      {:exit-message (usage summary)})))
-
-(defn exit [status msg]
-  (log/error msg)
-  (System/exit status))
 
 (defn verbosity->log-level
   "Convert verbosity to log level."
   [verbosity]
-  (case verbosity
+  (case (or verbosity 0)
     0 :info
     1 :debug
     :trace))
-
-(defn cli-deploy->context
-  "Build partial context from cli opts for deploy command.
-   This will be merged and overwrite context loaded from compoje."
-  [options]
-  (let [docker (select-keys options [:stack :prune :context
-                                     :with-registry-auth
-                                     :resove-image])]
-    {:docker docker}))
-
-(defn validate-deploy
-  [args global-summary]
-  (let [parsed (cli/parse-opts args deploy-opts :in-order true)
-        {:keys [options arguments errors summary]} parsed
-        config (first arguments)]
-    (cond
-      (:help options) ; help => exit OK with usage summary
-      (exit 0 (usage "deploy" global-summary summary))
-
-      errors
-      (exit 1 (error-msg errors))
-
-      (not= 1 (count arguments))
-      (exit 1 (str "Deploy requires 1 argument: directory to deploy"))
-
-      :else (assoc parsed
-                   :config-file config))))
-(defn parse-all-opts
-  "Parse cli options in two stages:
-   - global options
-   - action specific options
-
-   Return a map with all data with the followinf structure:
-   TODO: add structure once stable."
-  [args]
-  (let [{:keys [action arguments options]
-         :as global-parsed} (validate-args args)
-        arguments (into [] (rest arguments))
-        global-parsed (assoc global-parsed :arguments arguments)
-        cmd-args (:arguments global-parsed)
-        global-summary (:summary global-parsed)
-        parsed-cmd (case action
-                     "deploy" (validate-deploy cmd-args global-summary)
-                     ;; else action-opts are nil
-                     nil)
-        global-ctx (cli-opts->context options)
-        action-ctx (cli-deploy->context (:options parsed-cmd))]
-    {:action action
-     :global-opts global-parsed
-     :action-opts parsed-cmd
-     :context (u/deep-merge global-ctx action-ctx)}))
-
-(defn register-default-providers!
-  "Register providers available for calling."
-  ;; TODO: Do we need to register the provider?
-  []
-  (providers/register-provider! (vault-p/->VaultSecretsProvider)))
 
 (defn- set-hooman-logging!
   "Make log format friendly to hoomans."
@@ -192,55 +29,135 @@
   (log/merge-config! {:output-fn clog/output-fn
                       :min-level (verbosity->log-level verbosity)}))
 
+(defn register-default-providers!
+  "Register providers available for calling."
+  []
+  (providers/register-provider! (vault-p/->VaultSecretsProvider)))
+
+(def docker-defaults
+  "Defaults for docker deploy options.
+   x-compoje docker config and docker CLI flags override these."
+  {:resolve-image "always"
+   :with-registry-auth true})
+
+(def docker-cli-keys
+  "Deploy flags that map 1:1 onto keys under :docker in the context."
+  [:stack :context :prune :resolve-image :with-registry-auth])
+
+(defn cli-opts->docker
+  "Docker options given explicitly on the command line.
+   Flags that were not passed are left out, so they don't override
+   the x-compoje config. `false` (e.g. --no-with-registry-auth) is kept."
+  [opts]
+  (into {}
+        (filter (comp some? val))
+        (select-keys opts docker-cli-keys)))
+
 (defn cli-config->context
-  "Build a context with cli specific options."
-  [config-file set-args]
-  (let [config-file (fs/file config-file)
-        template-dir (config/config-name->template-dir config-file)
-        config (config/load-config! config-file set-args)
-        compose-file (or (get-in config [:docker :compose-file])
-                         (fs/path template-dir "stack.generated.yml"))]
-    (context/config->context config {:config-file config-file
-                                     :template-dir template-dir
-                                     :docker {:compose-file compose-file}})))
+  "Build the context for a stack file.
+
+   Precedence, lowest first:
+   docker defaults < x-compoje config in the stack file < --set overrides < docker CLI flags."
+  ([config-file set-args]
+   (cli-config->context config-file set-args {}))
+  ([config-file set-args cli-docker]
+   (let [config-file (fs/file config-file)
+         template-dir (config/config-name->template-dir config-file)
+         config (config/load-config! config-file set-args)
+         config (merge-with merge
+                            {:docker docker-defaults}
+                            config
+                            {:docker cli-docker})
+         compose-file (or (get-in config [:docker :compose-file])
+                          (fs/path template-dir "stack.generated.yml"))]
+     (context/config->context config {:config-file config-file
+                                      :template-dir template-dir
+                                      :docker {:compose-file compose-file}}))))
+
+(defn deploy-context
+  "Build the final context for a deploy: stack file config, CLI options
+   and provider results."
+  [{:keys [stack-file set] :as opts}]
+  (let [ctx (cli-config->context stack-file set (cli-opts->docker opts))
+        provider-results (providers/provide-secrets ctx)]
+    (context/final-context ctx provider-results)))
 
 (defn deploy
-  [parsed context]
-  (let [{:keys [config-file options arguments]} parsed
-        {dry-run :dry-run set-args :set} options
-        ctx (cli-config->context config-file set-args)
-        {:keys [template-dir config-file]} ctx
-        provider-results (providers/provide-secrets ctx)
-        context (context/final-context ctx provider-results)
-        docker (:docker context)
+  "Deploy a stack template to a Docker Swarm cluster.
+
+  Reads the x-compoje config from the stack file, applies --set overrides and
+  docker flags, fetches secrets from providers, renders the template to
+  stack.generated.yml and runs docker stack deploy."
+  {:flags ["--stack STACK" "Stack name. Overrides x-compoje docker.stack."
+           "--context CONTEXT" "Docker context to deploy to (docker --context)."
+           "--prune" {:doc "Prune services that are no longer referenced."
+                      :value true}
+           "--resolve-image STRATEGY" "Query the registry to resolve image digest and supported platforms: always, changed, never. Default: always."
+           "--[no-]with-registry-auth" "Send registry authentication details to Swarm agents. Default: on."
+           "--dry-run" {:doc "Render the stack and print it. Do not deploy."
+                        :value true}
+           "-s, --set <override>" {:doc "Override a config value: --set path.in.config=value. Repeatable."
+                                   :coll? true}]}
+  [{:keys [dry-run verbosity deploy-driver] :as opts}]
+  (set-hooman-logging! verbosity)
+  (register-default-providers!)
+  (log/debug "Providers are" (providers/registered-providers))
+  (when-not (= :docker deploy-driver)
+    (throw (ex-info (str "Unsupported deploy driver: " (name deploy-driver)
+                         ". Supported: docker.")
+                    {:deploy-driver deploy-driver})))
+  (let [context (deploy-context opts)
+        {:keys [template-dir docker]} context
         template-file (str (fs/file template-dir "stack.tpl.yml"))
         contents (render/render template-file context {})]
-    (log/debug "Deploy" config-file "opts" options
-               "arguments" arguments)
     (log/debug "Deploy context" context)
+    (when (str/blank? (some-> (:stack docker) str))
+      (throw (ex-info "No stack name. Set x-compoje docker.stack in the stack file, or pass --stack."
+                      {:stack-file (:stack-file opts)})))
     (if dry-run
       (do
-        (log/debug "Skip deployment. Render only.")
+        (log/info (docker/deploy-str docker))
         (log/info (u/pprint-str context) "\n\n")
         (log/info contents))
       (do
-        (spit (:compose-file docker) contents)
-        (docker/deploy docker options)))))
+        (spit (str (:compose-file docker)) contents)
+        (docker/deploy docker))))
+  ::done)
+
+(def cmdspec
+  {:name "compoje"
+   :doc "Templates for docker swarm stacks."
+   :strict? true
+   :flags ["-v, --verbose" {:doc "Increase verbosity: -v debug, -vv trace."
+                            :key :verbosity
+                            :default 0}
+           "--deploy-driver DRIVER" {:doc "Deployment driver. Only docker is supported."
+                                     :default "docker"
+                                     :parse keyword}]
+   :commands ["deploy <stack-file>" #'deploy]})
+
+(defn- help-requested? [args]
+  (some #{"-h" "--help" "help"} args))
+
+(defn- completion-command? [args]
+  (some #(str/starts-with? % "__licli") args))
 
 (defn main
-  "Default entry point for CLI app."
+  "Default entry point for the CLI app (used by the bb task).
+
+  Commands return ::done. lambdaisland/cli prints help and returns nil for
+  usage errors (no command, unknown command, missing <stack-file>); exit 1 in
+  that case so scripts can detect it. Parse errors and exceptions are
+  reported by lambdaisland/cli itself, which exits 1."
   [& args]
-  (let [parsed (parse-all-opts args)
-        {:keys [action global-opts action-opts context]} parsed
-        {:keys [options exit-message ok?]} global-opts
-        {:keys [verbosity]} options]
-    (set-hooman-logging! verbosity)
-    (log/trace "Parsed command line is" parsed)
-    (register-default-providers!)
-    (log/debug "Providers are" (providers/registered-providers))
-    ;; execute commands
-    (if exit-message
-      (exit (if ok? 0 1) exit-message)
-      (case action
-        "deploy"
-        (deploy action-opts context)))))
+  (let [result (cli/dispatch (cmdspec/to-cmdspec cmdspec) (vec args))]
+    (when-not (or (= ::done result)
+                  (help-requested? args)
+                  (completion-command? args))
+      (System/exit 1))
+    result))
+
+(defn -main
+  "JVM entry point: clojure -M -m compoje.cli ..."
+  [& args]
+  (apply main args))

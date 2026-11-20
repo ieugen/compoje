@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - More documentation in docs/docs.org; AGENTS.md / CLAUDE.md for coding agents.
 
 ### Changed
+- The CLI is built on [lambdaisland/cli](https://github.com/lambdaisland/cli) instead of tools.cli: generated help for every command (`bb compoje deploy --help`), strict flag checking, `--[no-]with-registry-auth` (registry auth could not be turned off before), `--deploy-driver DRIVER` takes a value, and usage errors still exit 1. `--set` overrides are repeatable as before. The JVM can run `clojure -M -m compoje.cli`.
 - YAML is parsed and generated with [yamlstar](https://github.com/yaml/yamlstar) (YAML 1.2) instead of clj-yaml (YAML 1.1). Values like `yes`, `no`, `on`, `off` now stay strings instead of becoming booleans. Known yamlstar 0.1.23 limitations: `to-yaml` adds a trailing newline to multi-line strings that lack one, and custom YAML tags are rejected.
 - Configuration lives in the stack template itself, under a top-level `x-compoje:` key (docker, providers, secrets, values), and is read as YAML. The separate `compoje.edn` file is no longer used.
 - Upgraded vault client from `amperity/vault-clj` 1.x to `com.amperity/vault-clj` 2.x.
@@ -21,6 +22,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added antq (`clojure -M:outdated`) for dependency checks.
 
 ### Fixed
+- `deploy` ran `docker stack deploy` without a stack name: the `x-compoje` docker settings and the `--stack`, `--context`, `--prune`, `--resolve-image` and `--with-registry-auth` flags never reached the docker command. They now do, with precedence defaults < x-compoje < `--set` < flags; a missing stack name is an error. `--prune` is now passed to docker.
+- Secrets providers declared in `x-compoje` were dropped from the context, and a provider `type` from YAML (a string) did not match the registered provider. Both fixed.
 - `deploy` with a bare file name (e.g. `bb compoje deploy stack.tpl.yml` run inside the stack directory) looked for the template at `/stack.tpl.yml`. A path without a directory part now means the current directory.
 - `deploy` was rejected by Docker ("additional property 'compoje' is not allowed") because the config section stayed in the rendered stack. The key is now `x-compoje:`, a compose extension field. A legacy `compoje:` key is still read, with a deprecation warning.
 - `deploy` crashed with a ClassCastException while building the context (`config->context` did not apply its extra maps to `deep-merge`).

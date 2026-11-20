@@ -47,7 +47,7 @@
       (log/trace "Processing secret" secret)
       (let [{:keys [provider name]} secret
             provider-cfg (first (get by-name {:name provider}))
-            type (:type provider-cfg)
+            type (some-> (:type provider-cfg) keyword)
             provider (get-provider type)
             result (run provider {:config provider-cfg
                                   :secret-spec secret

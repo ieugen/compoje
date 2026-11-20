@@ -1,42 +1,40 @@
 (ns compoje.deploy.docker
   "Deploy driver using docker native client"
   (:require [babashka.process :refer [shell]]
+            [clojure.string :as str]
             [taoensso.timbre :as log]))
 
+(defn deploy-args
+  "Arguments for `docker stack deploy`, as a vector (no shell quoting needed)."
+  [docker]
+  (let [{:keys [stack context resolve-image compose-file with-registry-auth prune]} docker]
+    (log/trace "deploy-args" docker)
+    (cond-> ["docker"]
+      context (into ["--context" (str context)])
+      true (into ["stack" "deploy"])
+      with-registry-auth (conj "--with-registry-auth")
+      resolve-image (into ["--resolve-image" (str resolve-image)])
+      prune (conj "--prune")
+      true (into ["--compose-file" (str compose-file) (str stack)]))))
+
 (defn deploy-str
-  "Deploy stack"
-  ([docker]
-   (let [{:keys [stack context resolve-image compose-file with-registry-auth]} docker]
-     (log/trace "deploy-str" docker ":" compose-file "->" stack)
-     (let [cli (str "docker "
-                    (when context
-                      (str "--context " context))
-                    " stack deploy "
-                    (when with-registry-auth
-                      (str "--with-registry-auth "))
-                    (when resolve-image
-                      (str "--resolve-image " resolve-image))
-                    " --compose-file " compose-file " " stack)]
-       cli))))
+  "The deploy command as a string, for logging and dry runs."
+  [docker]
+  (str/join " " (deploy-args docker)))
 
 (defn deploy
-  "TODO: Move deployment computation up to participate in dry-run"
-  ([docker]
-   (deploy docker nil))
-  ([docker opts]
-   (let [cli (deploy-str docker)
-         {:keys [dry-run]} opts]
-     (log/info "Deploy using:" cli)
-     (if dry-run
-       (log/info "Dry-run:" cli)
-       (try
-         (shell {:err :string} cli)
-         (catch Exception e
-           (let [{:keys [err cmd type]} (ex-data e)]
-             (when (= type :babashka.process/error)
-               (log/error "Exception deploying:" cmd)
-               (log/error "Error:" err)))
-           (System/exit -1)))))))
+  "Run docker stack deploy. Exits the process if docker fails."
+  [docker]
+  (let [args (deploy-args docker)]
+    (log/info "Deploy using:" (str/join " " args))
+    (try
+      (apply shell {:err :string} args)
+      (catch Exception e
+        (let [{:keys [err cmd type]} (ex-data e)]
+          (when (= type :babashka.process/error)
+            (log/error "Exception deploying:" cmd)
+            (log/error "Error:" err)))
+        (System/exit 1)))))
 
 (comment
 

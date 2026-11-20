@@ -19,23 +19,6 @@ or fails if there is none.
 
 Likely fix: render the file that was passed, since config and template now live in the same file.
 
-## `--deploy-driver` option is malformed
-
-Found 2026-11-21.
-
-The global option in `main-opts` (src/compoje/cli.clj):
-
-```clojure
-["d" "--deploy-driver" "Use a deployment driver. Defaults to :docker"
- :default :docker]
-```
-
-- The short flag is `"d"`, not `"-d"`.
-- The long option has no argument name (`--deploy-driver DRIVER`), so tools.cli treats it as a boolean flag
-  that defaults to `:docker`.
-
-Harmless while Docker is the only driver. Fix both when a second driver is added.
-
 ## yamlstar 0.1.23 limitations
 
 These come from the YAML library, not compoje code, and are already documented in AGENTS.md and CHANGELOG.md:
