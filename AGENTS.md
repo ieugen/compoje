@@ -8,7 +8,7 @@ User docs: README.org, docs/docs.org (Org-mode, not Markdown).
 - **Run tests with `bin/kaocha`** (the canonical test command; it wraps `clojure -M:test`). Extra args pass through to kaocha: `bin/kaocha unit`, `bin/kaocha integration`, `bin/kaocha --focus unit.compoje.render-test`, `bin/kaocha --watch`.
 - Run CLI (bb): `bb compoje deploy [--dry-run] [--set a.b=v] path/to/stack.tpl.yml`
 - Babashka tests (rich-comment-tests only): `bb test-bb`
-- Format: `bb fmt check` / `bb fmt fix` (cljfmt)
+- Format: `bb fmt check` / `bb fmt fix` (cljfmt). **Run `bb fmt fix` after every code change**, before tests and before handing work back; `bb fmt check` must be clean.
 - Outdated deps: `clojure -M:outdated` (antq)
 - Local Vault for REPL: `bb vault-dev` (root token `myroot`)
 - REPL: `:dev` alias (adds dev/, test/, test-resources/, portal)

@@ -10,7 +10,8 @@ Status: `[ ]` todo · `[x]` done · `[!]` blocked / held back (reason in notes)
 1. Pick the next `[ ]` row below.
 2. Read the dependency's changelog for breaking changes between the two versions.
 3. Bump the version everywhere it appears (deps.edn `:deps`, `:dev`, `:test`, `:outdated`, bb.edn).
-4. Check:
+4. Format: `bb fmt fix` (whenever .clj files changed), then `bb fmt check` must be clean.
+   Check:
    - `bin/kaocha`: unit + integration (integration needs Docker)
    - `bb test-bb`
    - `bb compoje deploy --dry-run example-stacks/nginx/stack.tpl.yml`
@@ -55,7 +56,7 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
   decision. **Fixed:** key renamed to `x-compoje:` (legacy `compoje:` still read with a warning);
   both example stacks pass `docker stack config`, and the stale generated files were regenerated.
 - Step 13: with cljfmt 0.16.6, `bb fmt check` reports 11 files (src + test) with incorrect formatting,
-  mostly consecutive blank lines and indentation. Run `bb fmt fix` as its own commit, separate from the bump.
+  mostly consecutive blank lines and indentation. **Done:** formatted with `bb fmt fix` in its own commit (fc7f73e).
 
 Not reported by antq (already current): kaocha 1.91.1392, clj-test-containers 0.7.4, slf4j-timbre 0.4.1, bb spec.alpha git dep.
 
