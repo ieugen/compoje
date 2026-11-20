@@ -26,13 +26,9 @@
                                            :complex "3"})})]
       (is (= expected res)))))
 
-
-
 (comment
 
-  (run-tests)
-
-  )
+  (run-tests))
 
 (deftest legacy-compoje-key-test
   (testing "a legacy top-level compoje key is still read"

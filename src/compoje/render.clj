@@ -56,15 +56,13 @@
                  (get context-map (keyword data-key)))
         content (yaml/generate-string data :dumper-options {:flow-style :block})]
     (tap> {"args:" args
-          "context-map" context-map
-          "content" content})
+           "context-map" context-map
+           "content" content})
     content))
 
 (comment
 
-  (parser/resolve-arg "Hello {{variable}}" {:variable "John"})
-
-  )
+  (parser/resolve-arg "Hello {{variable}}" {:variable "John"}))
 
 (parser/add-tag! :file-path file-path)
 (parser/add-tag! :file-hash file-hash)
@@ -106,6 +104,4 @@
 
   (parser/render "{% file-hash quux %} {% foo baz %}" {})
 
-  (parser/render "{%  quux %} {% foo baz %}" {})
-
-  )
+  (parser/render "{%  quux %} {% foo baz %}" {}))

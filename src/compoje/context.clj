@@ -6,18 +6,18 @@
 
 ;; TODO: consider whether we should use directory name as default stack name
 #_(defn context-with-stack-name
-  "Build stack name and assoc in context.
+    "Build stack name and assoc in context.
    Stack name is taken in order from:
 
    - context
    - cli option"
-  [context template-dir]
-  (let [stack (get-in context [:docker :stack])
-        stack (when-not stack
-                (fs/file-name template-dir))]
-    (when (str/blank? stack)
-      (throw (ex-info "Stack should not be nil" {})))
-    (assoc-in context [:docker :stack] stack)))
+    [context template-dir]
+    (let [stack (get-in context [:docker :stack])
+          stack (when-not stack
+                  (fs/file-name template-dir))]
+      (when (str/blank? stack)
+        (throw (ex-info "Stack should not be nil" {})))
+      (assoc-in context [:docker :stack] stack)))
 
 (defn final-context
   "Deep merge contexts, overwriting values."
@@ -60,7 +60,6 @@
   "Enhance the context with provider data"
   [context provider-data]
   (u/deep-merge context provider-data))
-
 
 (comment
 

@@ -20,7 +20,6 @@
                         {:values {:hello "world"}})]
       (is (= tpl "Hello world!")))))
 
-
 (deftest test-to-yaml-render-helper
 
   (testing "render template with to-yaml \n"
@@ -31,5 +30,4 @@
 
 (comment
 
-  (run-test test-to-yaml-render-helper)
-  )
+  (run-test test-to-yaml-render-helper))

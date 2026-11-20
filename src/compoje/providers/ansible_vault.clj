@@ -20,7 +20,6 @@
            (javax.crypto Mac Cipher SecretKeyFactory SecretKey)
            (javax.crypto.spec PBEKeySpec SecretKeySpec IvParameterSpec)))
 
-
 (defn parse-header
   "Parse header line for ansible-vault encoded text file.
 
@@ -77,10 +76,7 @@
 
   (parse-header "$ANSIBLE_VAULT;1.2;AES256;vault-id-label") ;=>
  ; {:format-id "$ANSIBLE_VAULT", :format-version "1.2", :cipher "AES256", :vault-id-label "vault-id-label"}
-
   )
-
-
 (defn hexlify
   "Implement python binascii hexlify method used by ansible-vault
    https://docs.python.org/3/library/binascii.html#binascii.hexlify"
@@ -136,7 +132,7 @@
       (let [high (* 2 i)
             low (+ high 1)
             bhigh (-> (Character/digit (.charAt hexstr high) 16)
-                   (bit-shift-left 4))
+                      (bit-shift-left 4))
             blow (Character/digit (.charAt hexstr low) 16)
             bv (+ bhigh  blow)]
         ;; (println i " " high " " low " " bv)
@@ -149,10 +145,7 @@
   (subs "B901EF" 0 2)
 
   (doseq [b (byte-array [0xb9 0x01 0xef])]
-    (println b))
-
-  )
-
+    (println b)))
 
 (defn parse-vault-secret
   [value]
@@ -241,9 +234,7 @@
   (padded-buffer-size 48 49) ;=> 96
 
   (padding-value 48 36) ;=> 12
-
   )
-
 (defn valid-block-size?
   "Throw exception if block size in bits:
     - is not multiple of 8
@@ -278,9 +269,7 @@
        (catch clojure.lang.ExceptionInfo _e :exception)) ;=> :exception
   (try (valid-block-size? 2041)
        (catch clojure.lang.ExceptionInfo _e :exception)) ;=> :exception
-
   )
-
 (defn pkcs7-pad
   "Inspired from docs:
    https://cryptography.io/en/latest/hazmat/primitives/padding/#module-cryptography.hazmat.primitives.padding
@@ -327,9 +316,7 @@
   (let [s "my_encrypted_var: \"Eugen - Netdava\"\n"
         s-bytes (.getBytes s StandardCharsets/UTF_8)]
     (has-pkcs7-padding? s-bytes)) ;=> 12
-
   )
-
 (defn pkcs7-unpad
   "Removes pkcs7 padding from a given block size (in bits) and a byte array"
   [block-size-bits buffer]
@@ -353,8 +340,7 @@
 
   (let [s "my_encrypted_var: \"Eugen - Netdava\"\n"
         s-bytes (.getBytes s StandardCharsets/UTF_8)]
-    (String. (pkcs7-unpad 384 s-bytes)))
-  )
+    (String. (pkcs7-unpad 384 s-bytes))))
 
 (defn decrypt
   [algorithm cipher-text key iv]
@@ -396,12 +382,10 @@
   (def a2 (int-array '(9 8 7 6)))
   (aget a2 (dec (count a2)))
 
-
   (let [text "my_encrypted_var: \"Eugen - Netdava\"\n"
         bytes (.getBytes text StandardCharsets/UTF_8)
         padded-bytes (pkcs7-pad 384 bytes)]
     (spit "padding.yml" (String. padded-bytes StandardCharsets/UTF_8)))
-
 
   (def data "my_encrypted_var: !vault |
           $ANSIBLE_VAULT;1.2;AES256;dev
@@ -414,8 +398,6 @@
   (yaml/parse-string data
                      :keywords false
                      :unknown-tag-fn yaml-!vault-tag-handler)
-
-
 
   (let [file-data (parse-vault-secret "$ANSIBLE_VAULT;1.2;AES256;compoje
                   30636333393437623365383966343231613061383131353661386333656231393863646235323566
@@ -451,5 +433,4 @@
 
   ;; 12 - 0x0C
   ;; 48-12
-
   )

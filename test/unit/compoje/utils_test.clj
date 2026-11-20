@@ -30,5 +30,4 @@
 
 (comment
 
-  (run-test set-args->map-test)
-  )
+  (run-test set-args->map-test))

@@ -39,8 +39,8 @@
        (System/exit 1))
      (if app-role?
        (let [client (approle/login client :app-role
-                                         {:role-id app-role-id
-                                          :secret-id app-secret-id})]
+                                   {:role-id app-role-id
+                                    :secret-id app-secret-id})]
          (swap! state merge {:client client
                              :method :app-role}))
        (if token

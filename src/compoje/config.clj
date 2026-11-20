@@ -82,15 +82,10 @@
 
 (comment
 
-
   (def cfg (read-config-yaml "example-stacks/nginx/stack.tpl.yml"))
   cfg
   (def cfg (file->config! "example-stacks/nginx/stack.tpl.yml"))
 
   (type (:providers cfg))
 
-  (str/lower-case (fs/extension "a.Yaml"))
-
-
-
-  )
+  (str/lower-case (fs/extension "a.Yaml")))
