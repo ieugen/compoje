@@ -14,6 +14,8 @@
  :aliases {:dev {:extra-paths ["dev" "test" "test-resources"]
                  :extra-deps {io.github.matthewdowney/rich-comment-tests {:mvn/version "v1.0.3"}
                               clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
+                              ;; 0.7.4 pulls testcontainers 1.17.6, too old for Docker >= 29 (min API 1.40)
+                              org.testcontainers/testcontainers {:mvn/version "1.21.4"}
                               com.fzakaria/slf4j-timbre {:mvn/version "0.4.1"}
                               djblue/portal {:mvn/version "0.58.5"
                                              ;; data.json > 2.4.0 does not work with bb - definterace
@@ -25,6 +27,8 @@
                   :extra-paths ["test" "test-resources"]
                   :extra-deps {io.github.matthewdowney/rich-comment-tests {:mvn/version "v1.0.3"}
                                clj-test-containers/clj-test-containers {:mvn/version "0.7.4"}
+                               ;; 0.7.4 pulls testcontainers 1.17.6, too old for Docker >= 29 (min API 1.40)
+                               org.testcontainers/testcontainers {:mvn/version "1.21.4"}
                                com.fzakaria/slf4j-timbre {:mvn/version "0.4.1"}
                                lambdaisland/kaocha {:mvn/version "1.91.1392"}
                                org.slf4j/jcl-over-slf4j {:mvn/version "2.0.17"}
