@@ -3,7 +3,7 @@
             [compoje.utils :as u]
             [clojure.tools.logging :as log]
             [selmer.filters :refer [add-filter!]]
-            [clj-yaml.core :as yaml]
+            [yamlstar.core :as yaml]
             [selmer.parser :as parser]
             [selmer.util :refer [without-escaping]]))
 
@@ -54,7 +54,7 @@
   (let [data-key (first args)
         data (or (get context-map data-key)
                  (get context-map (keyword data-key)))
-        content (yaml/generate-string data :dumper-options {:flow-style :block})]
+        content (yaml/dump data)]
     (tap> {"args:" args
            "context-map" context-map
            "content" content})
@@ -90,12 +90,9 @@
 
 (comment
 
-  (println (yaml/generate-string
+  (println (yaml/dump
             [{:name "John Smith", :age 33}
-             {:name "Mary Smith", :age 27}]
-            :dumper-options {:indent 6
-                             :indicator-indent 4
-                             :flow-style :block}))
+             {:name "Mary Smith", :age 27}]))
 
   (without-escaping
    (parser/render "{{x}}" {:x "I <3 NY"}))

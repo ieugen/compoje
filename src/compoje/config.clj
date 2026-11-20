@@ -1,21 +1,12 @@
 (ns compoje.config
   (:require [babashka.fs :as fs]
-            [clj-yaml.core :as yaml]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clojure.walk :as walk]
-            [compoje.utils :as u])
+            [compoje.utils :as u]
+            [yamlstar.core :as yaml])
   (:import [java.io IOException]))
-
-(defn unlazify
-  "Make vectors instead of lazy sequences
-   https://github.com/clj-commons/clj-yaml/issues/110"
-  [x]
-  (let [seq->vec #(if (= clojure.lang.LazySeq (type %))
-                    (vec %)
-                    %)]
-    (walk/postwalk seq->vec x)))
 
 (defn config-name->template-dir
   "Takes a config file and returns the template directory."
@@ -27,16 +18,15 @@
      f)))
 
 (defn read-config-yaml
-  "Parse yaml using clojure.java.io/reader.
-   Accepts any source reader accepts:
-   String, bytes, URL, file, InputStream.
+  "Parse YAML from any source clojure.java.io/reader accepts:
+   String path, bytes, char array, URL, File, InputStream.
 
-   Parses Yaml 1.1 format - packaged with babashka.
-   TODO: find a way to use more cleaner Yaml 1.2"
+   Parses YAML 1.2 with yamlstar (pure Clojure, runs on babashka).
+   Map keys are keywordized, as the rest of compoje expects."
   [name]
-  (->
-   (yaml/parse-stream (io/reader name))
-   unlazify))
+  (-> (slurp name)
+      yaml/load
+      walk/keywordize-keys))
 
 (defn file->config!
   "Read config as a yaml.

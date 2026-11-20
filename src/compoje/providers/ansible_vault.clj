@@ -13,7 +13,7 @@
    - https://docs.ansible.com/ansible/latest/vault_guide/index.html
    - https://github.com/ansible/ansible/blob/devel/lib/ansible/parsing/vault/__init__.py
    "
-  (:require [clj-yaml.core :as yaml]
+  (:require [yamlstar.core :as yaml]
             [clojure.string :as str])
   (:import (java.nio.charset StandardCharsets)
            (java.util Arrays)
@@ -395,9 +395,10 @@
           6664656334373166630a363736393262666465663432613932613036303963343263623137386239
           6330")
 
-  (yaml/parse-string data
-                     :keywords false
-                     :unknown-tag-fn yaml-!vault-tag-handler)
+  ;; yamlstar 0.1.23 has no hook for custom tags: this throws
+  ;; "Unknown tag: !vault". yaml-!vault-tag-handler was written for
+  ;; clj-yaml's :unknown-tag-fn and is unused until yamlstar supports tags.
+  (yaml/load data)
 
   (let [file-data (parse-vault-secret "$ANSIBLE_VAULT;1.2;AES256;compoje
                   30636333393437623365383966343231613061383131353661386333656231393863646235323566

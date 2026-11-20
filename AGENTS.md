@@ -38,10 +38,10 @@ A stack file is a compose file plus an `x-compoje:` key (docker, providers, secr
 
 ## Conventions
 - Babashka is the production runtime, so code must stay bb-compatible: no deps or JVM features bb lacks (see the data.json exclusion note in deps.edn). Green JVM tests are not enough; also verify with `bb test-bb` and `bb compoje deploy --dry-run example-stacks/nginx/stack.tpl.yml`.
-- bb ships built-in fs, process, cheshire, clj-yaml, selmer, timbre and tools.cli. At runtime those built-in versions are used, not the deps.edn versions, so upgrading them in deps.edn mainly affects JVM dev/tests.
+- bb ships built-in fs, process, cheshire, selmer, timbre and tools.cli (and clj-yaml, which compoje no longer uses). At runtime those built-in versions are used, not the deps.edn versions, so upgrading them in deps.edn mainly affects JVM dev/tests.
 - Tests: kaocha suites under test/unit and test/integration; namespaces are prefixed `unit.` / `integration.`. Rich-comment-tests (`^:rct/test` comment blocks in src/, currently in providers/ansible_vault.clj) run via test/unit/rct_test.clj.
 - Logging: timbre in cli.clj, logging.clj and deploy/docker.clj; clojure.tools.logging elsewhere.
-- YAML is parsed with clj-yaml (YAML 1.1); `config/unlazify` turns lazy seqs into vectors.
+- YAML is parsed and generated with yamlstar (`yamlstar.core/load`, `dump`): YAML 1.2, pure Clojure, loaded from deps.edn in bb (not built in). `config/read-config-yaml` keywordizes keys. Known limits of yamlstar 0.1.23: `dump` writes multi-line strings without a trailing newline as `|`, adding one (`"a\nb"` round-trips to `"a\nb\n"`); custom tags (e.g. `!vault`, compose `!reset`) throw "Unknown tag". yamlstar excludes `org.clojure/data.json` in deps.edn; keep that, as data.json > 2.4.0 breaks bb.
 - `*.generated.yml` files are render output. Regenerate them, don't hand-edit them.
 - Never commit decrypted secrets (e.g. a local `decrypted.yml`).
 - Record user-visible changes under `## [Unreleased]` in CHANGELOG.md.

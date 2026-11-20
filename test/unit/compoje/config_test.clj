@@ -1,6 +1,5 @@
 (ns unit.compoje.config-test
   (:require [clojure.test :refer :all]
-            [flatland.ordered.map :refer [ordered-map]]
             [compoje.config :as c]))
 
 (deftest config-test
@@ -18,12 +17,10 @@
                                 simple: 2")
           args ["values.complex=3" "docker.context=remote-swarm"]
           res (c/load-config! file args)
-          expected (ordered-map {:docker (ordered-map
-                                          {:stack "nginx"
-                                           :context "remote-swarm"})
-                                 :values (ordered-map
-                                          {:simple 2
-                                           :complex "3"})})]
+          expected {:docker {:stack "nginx"
+                             :context "remote-swarm"}
+                    :values {:simple 2
+                             :complex "3"}}]
       (is (= expected res)))))
 
 (comment
@@ -34,3 +31,9 @@
   (testing "a legacy top-level compoje key is still read"
     (is (= {:docker {:stack "nginx"}}
            (c/file->config! (char-array "compoje:\n  docker:\n    stack: nginx\n"))))))
+
+(deftest yaml-1-2-test
+  (testing "YAML 1.2: yes/on/off stay strings, keys are keywordized, sequences are vectors"
+    (let [cfg (c/file->config! (char-array "x-compoje:\n  values:\n    a: yes\n    b: on\n    c: [1, 2]\n"))]
+      (is (= {:values {:a "yes" :b "on" :c [1 2]}} cfg))
+      (is (vector? (get-in cfg [:values :c]))))))

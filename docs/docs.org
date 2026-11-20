@@ -36,6 +36,7 @@ Old:
 
 Compoje configuration can be considered a map of keys and values.
 Some values can be maps as well.
+Stack files are parsed as YAML 1.2 (via yamlstar): yes/no/on/off are strings, not booleans.
 The options are under the 'x-compoje' key.
 The x- prefix makes it a compose extension field, so the rendered stack stays a valid compose file.
 A legacy 'compoje' key is still read, with a deprecation warning, but docker stack deploy rejects it.
