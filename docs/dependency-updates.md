@@ -29,7 +29,7 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
 | 3  | [x]    | clj-commons/clj-yaml                                     | deps                        | 1.0.29 → 1.0.30     | patch; config/render YAML. kaocha 11/36 green, bb green, dry-run OK (bb uses built-in clj-yaml) |
 | 4  | [x]    | org.slf4j/* (jcl-over, jul-to, log4j-over, slf4j-simple) | :dev, :test, :outdated      | 2.0.17 → 2.0.20     | patch; one step. 7 entries bumped; kaocha 11/36 green, bb green, dry-run OK, :outdated resolves |
 | 5  | [x]    | luposlip/json-schema                                     | deps                        | 0.4.6 → 0.4.8       | not used in code yet. kaocha 11/36 green, bb green, dry-run OK, `json-schema.core` loads on JVM |
-| 6  | [ ]    | babashka/fs                                              | deps                        | 0.5.24 → 0.5.34     | heavily used |
+| 6  | [x]    | babashka/fs                                              | deps                        | 0.5.24 → 0.5.34     | heavily used; changelog: no breaking changes. kaocha 11/36 green, bb green, dry-run OK (bb uses built-in fs) |
 | 7  | [ ]    | io.github.matthewdowney/rich-comment-tests               | :dev, :test, bb.edn test-bb | v1.0.3 → v1.0.5     | test infra |
 | 8  | [ ]    | com.taoensso/timbre                                      | deps                        | 6.6.1 → 6.8.0       | check .clj-kondo encore config |
 | 9  | [ ]    | com.amperity/vault-clj                                   | deps                        | 2.2.586 → 2.3.594   | covered by Vault integration test |
