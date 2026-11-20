@@ -33,7 +33,7 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
 | 7  | [x]    | io.github.matthewdowney/rich-comment-tests               | :dev, :test, bb.edn test-bb | v1.0.3 → v1.0.5     | test infra; upstream: hang + auto-resolved keyword fixes. 3 places bumped; kaocha 11/36 green, bb test-bb 6/16 green, dry-run OK |
 | 8  | [x]    | com.taoensso/timbre                                      | deps                        | 6.6.1 → 6.8.0       | changelog: non-breaking (6.7 drops Clojure 1.9, throws on invalid compile-time min-level; neither applies). kaocha 11/36 green, bb green, dry-run OK; JVM `compoje.cli/main -v` dry-run logs OK |
 | 9  | [x]    | com.amperity/vault-clj                                   | deps                        | 2.2.586 → 2.3.594   | additive only (Azure auth, header-merge fix). Not built into bb, so bb loads it too. kaocha 11/36 green incl. Vault integration, bb green, dry-run OK, bb loads vault.client.http + kv.v2 |
-| 10 | [ ]    | selmer/selmer                                            | deps                        | 1.12.62 → 1.13.5    | custom `<{ }>`/`<% %>` delimiters, `add-tag!`, `without-escaping` |
+| 10 | [x]    | selmer/selmer                                            | deps                        | 1.12.62 → 1.13.5    | only breaking change is the `script` tag (unused). JVM render of nginx + all-opts-stack byte-identical between 1.12.62 and 1.13.5. kaocha 11/36 green, bb green, dry-run OK (bb uses built-in selmer) |
 | 11 | [ ]    | org.clojure/tools.cli                                    | deps                        | 1.1.230 → 1.4.256   | check parse-opts `:multi`/`:update-fn` |
 | 12 | [ ]    | metosin/malli                                            | deps                        | 0.17.0 → 0.20.3     | not used in code yet; pre-1.0 |
 | 13 | [ ]    | dev.weavejester/cljfmt                                   | bb.edn                      | 0.13.0 → 0.16.6     | run `bb fmt check`; keep reformatting separate |
@@ -48,6 +48,12 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
   `compoje.context/config->context` passed its `& more` seq to `deep-merge` without `apply`.
   This was not caused by the bump. Fixed in src/compoje/context.clj, with a regression test
   `unit.compoje.context-test/config->context-test`. Commit it separately from the Clojure bump.
+- Step 10: the rendered stack still contains the whole `compoje:` config section, and it is written
+  to `stack.generated.yml` and passed to `docker stack deploy`. Compose only allows `x-` prefixed
+  extra top-level keys; confirmed with `docker stack config -c`: "additional property 'compoje' is not allowed". The committed `stack.generated.yml`
+  files predate the config-in-stack-file change and are stale. Not caused by any bump; needs a design
+  decision. **Fixed:** key renamed to `x-compoje:` (legacy `compoje:` still read with a warning);
+  both example stacks pass `docker stack config`, and the stale generated files were regenerated.
 
 Not reported by antq (already current): kaocha 1.91.1392, clj-test-containers 0.7.4, slf4j-timbre 0.4.1, bb spec.alpha git dep.
 
