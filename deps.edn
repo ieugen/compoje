@@ -4,7 +4,7 @@
         cheshire/cheshire {:mvn/version "5.13.0"}
         clj-commons/clj-yaml {:mvn/version "1.0.30"}
         com.amperity/vault-clj {:mvn/version "2.2.586"}
-        com.taoensso/timbre {:mvn/version "6.6.1"}
+        com.taoensso/timbre {:mvn/version "6.8.0"}
         luposlip/json-schema {:mvn/version "0.4.8"}
         metosin/malli {:mvn/version "0.17.0"}
         org.clojure/clojure {:mvn/version "1.12.7"}
