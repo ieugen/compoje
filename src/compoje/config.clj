@@ -9,11 +9,10 @@
   (:import [java.io IOException]))
 
 (defn config-name->template-dir
-  "Takes a config file and returns the template directory."
+  "Takes a config file and returns the template directory.
+   A bare file name (no directory part) means the current directory: \".\"."
   ([config-file]
-   (let [f (-> (fs/file config-file)
-               fs/parent
-               str)]
+   (let [f (str (or (fs/parent (fs/file config-file)) "."))]
      (log/trace "Template dir" f)
      f)))
 

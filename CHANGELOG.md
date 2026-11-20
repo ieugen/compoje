@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added antq (`clojure -M:outdated`) for dependency checks.
 
 ### Fixed
+- `deploy` with a bare file name (e.g. `bb compoje deploy stack.tpl.yml` run inside the stack directory) looked for the template at `/stack.tpl.yml`. A path without a directory part now means the current directory.
 - `deploy` was rejected by Docker ("additional property 'compoje' is not allowed") because the config section stayed in the rendered stack. The key is now `x-compoje:`, a compose extension field. A legacy `compoje:` key is still read, with a deprecation warning.
 - `deploy` crashed with a ClassCastException while building the context (`config->context` did not apply its extra maps to `deep-merge`).
 - Integration tests work with Docker 29+: testcontainers pinned to 2.0.5 (the 1.17.6 version that clj-test-containers 0.7.4 pulls in is too old).

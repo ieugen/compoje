@@ -7,7 +7,9 @@
   (testing "config-name->template-dir \n"
     (let [hash (c/config-name->template-dir
                 "test/unit/compoje/config_test.clj")]
-      (is (= hash "test/unit/compoje"))))
+      (is (= hash "test/unit/compoje")))
+    (is (= "." (c/config-name->template-dir "stack.tpl.yml"))
+        "bare file name resolves to the current directory, not the filesystem root"))
 
   (testing "load config from data (file)"
     (let [file (char-array "x-compoje:

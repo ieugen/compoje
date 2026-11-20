@@ -24,7 +24,7 @@
   ([file-ctx cli-ctx & other]
    (log/debug "Merge" file-ctx cli-ctx)
    (let [template-dir (:template-dir file-ctx)
-         file (str (fs/absolutize (fs/path template-dir "stack.generated.yml")))
+         file (str (fs/normalize (fs/absolutize (fs/path template-dir "stack.generated.yml"))))
          ctx (u/deep-merge file-ctx cli-ctx {:docker {:compose-file file}})
          ctx (apply u/deep-merge ctx other)]
        ;; TODO: some context validations

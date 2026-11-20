@@ -45,3 +45,4 @@ A stack file is a compose file plus an `x-compoje:` key (docker, providers, secr
 - `*.generated.yml` files are render output. Regenerate them, don't hand-edit them.
 - Never commit decrypted secrets (e.g. a local `decrypted.yml`).
 - Record user-visible changes under `## [Unreleased]` in CHANGELOG.md.
+- Open problems deferred for later review are in docs/known-issues.md. Add newly found ones there instead of fixing them unasked; remove an entry when it is fixed.
