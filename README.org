@@ -10,6 +10,8 @@ Hence this project.
 
 ** How it works
 
+New to compoje? Start with the [[file:docs/quick-start.md][quick start guide]].
+
 For documentation see [[docs/docs.org]].
 
 ** Features
