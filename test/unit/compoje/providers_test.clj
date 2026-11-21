@@ -8,7 +8,7 @@
                           (reify p/SecretsProvider
                             (provider-name [_] :unit.compoje.providers-test/fake)
                             (run [_ {:keys [secret-spec]}] {:got (:name secret-spec)})))
-    (is (= {"cert" {:got "cert"}}
+    (is (= {:cert {:got "cert"}}
            (p/provide-secrets {:template-dir "."
                                :providers [{:name "my-fake"
                                             :type "unit.compoje.providers-test/fake"}]

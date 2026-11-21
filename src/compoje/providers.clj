@@ -1,7 +1,10 @@
 (ns compoje.providers
   "Providers help to integrate with other systems to extend compoje."
-  (:require [clojure.tools.logging :as log]
-            [clojure.set :as set]))
+  (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
+            [clojure.set :as set]
+            [clojure.tools.logging :as log]
+            [compoje.utils :as u]))
 
 (def ^:private provider-types (atom {}))
 
@@ -52,8 +55,51 @@
             result (run provider {:config provider-cfg
                                   :secret-spec secret
                                   :template-dir template-dir})]
-        (swap! results assoc name result)))
+        ;; keyword key: Selmer resolves template paths (<{ name.key }>) by keyword
+        (swap! results assoc (keyword name) result)))
     @results))
+
+(defn secret-content
+  "The content to write for a secret: the whole content, or only `spit-key`
+   (looked up as given, then as a keyword), rendered as edn/json if `format`
+   asks for it. Pure."
+  [{:keys [content spit-key format]}]
+  (if (nil? spit-key)
+    ;; pretty print only edn maps
+    ;; https://github.com/amperity/vault-clj/issues/100
+    (case format
+      "edn" (u/pprint-str content)
+      "json" (json/generate-string content)
+      content)
+    (if (contains? content spit-key)
+      (get content spit-key)
+      (get content (keyword spit-key)))))
+
+^:rct/test
+(comment
+  (secret-content {:content "abc"}) ;=> "abc"
+  (secret-content {:content {:a 1} :format "json"}) ;=> "{\"a\":1}"
+  (secret-content {:content {"k" "v"} :spit-key "k"}) ;=> "v"
+  (secret-content {:content {:k "v"} :spit-key "k"}) ;=> "v"
+  (secret-content {:content {:k "v"} :spit-key "missing"}) ;=> nil
+  )
+
+(defn secret->file!
+  "Write a secret spec's content to :local-path (relative to `base-dir`), if set.
+   Writes the whole content or just :spit-key, see `secret-content`.
+   Returns the secret's :content."
+  ([secret-spec]
+   (secret->file! (System/getProperty "user.dir") secret-spec))
+  ([base-dir {:keys [local-path content] :as secret-spec}]
+   ;; TODO: Also during dry-run, avoid writing secrets as files, just log ?!
+   ;; TODO: Compute hash for secret to avoid needing a file on disk for hash
+   (if local-path
+     (let [path (-> (fs/file base-dir local-path) fs/absolutize fs/file)]
+       (fs/create-dirs (fs/parent path))
+       (log/trace "Write secret to" (str path))
+       (spit path (secret-content secret-spec)))
+     (log/trace "Skip writing secret. Missing :local-path option."))
+   content))
 
 (comment
 

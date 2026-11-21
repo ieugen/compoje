@@ -1,11 +1,8 @@
 (ns compoje.providers.vault
-  (:require [babashka.fs :as fs]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [clojure.string :as str]
-            [cheshire.core :as json]
             [clojure.tools.logging :as log]
             [compoje.providers :as providers]
-            [compoje.utils :as u]
             [vault.client :as vault]
             [vault.auth.approle :as approle]
             [vault.secret.kv.v2 :as kv2]))
@@ -65,34 +62,6 @@
         content (kv2/read-secret client secret-path opts)]
     (assoc secret-spec :content content)))
 
-(defn secret->file!
-  "Write a secret spec to file.
-   It can spit whole contents to file or just a single key."
-  ([secret-spec]
-   (secret->file! (System/getProperty "user.dir") secret-spec))
-  ([base-dir secret-spec]
-   (let [{:keys [local-path content spit-key format]} secret-spec]
-     ;; TODO: Also during dry-run, avoid writing secrets as files, just log ?!
-     ;; TODO: Compute hash for secret to avoid needing a file on disk for hash
-     (if local-path
-       (let [path (-> (fs/file base-dir local-path)
-                      (fs/absolutize)
-                      (fs/file))
-             path-str (str path)
-             content (if (nil? spit-key)
-                       ;; pretty print only edn maps
-                       ;; https://github.com/amperity/vault-clj/issues/100
-                       (case format
-                         "edn" (u/pprint-str content)
-                         "json" (json/generate-string content)
-                         content)
-                       (get content spit-key))]
-         (fs/create-dirs (fs/parent path))
-         (log/trace "Write secret to" path-str)
-         (spit path content))
-       (log/trace "Skip writing secret. Missing :local-path option."))
-     content)))
-
 (defrecord VaultSecretsProvider []
   providers/SecretsProvider
   (run [_this context]
@@ -101,7 +70,7 @@
       (let [{:keys [config secret-spec template-dir]} context
             client (authenticated-client config)
             secret (read-kvv2! client secret-spec)]
-        (secret->file! template-dir secret))
+        (providers/secret->file! template-dir secret))
       (catch Exception e
         (let [{:keys [type error status]} (ex-data e)]
           (if (= type :vault.client.api-util/api-error)

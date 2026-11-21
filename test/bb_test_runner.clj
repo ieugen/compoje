@@ -1,12 +1,20 @@
 (ns bb-test-runner
   (:require
    [clojure.test :as t]
+   [unit.ansible-vault.core-test]
+   [unit.ansible-vault.yamlstar-test]
+   [unit.compoje.providers.ansible-vault-test]
    [unit.rct-test]))
 
+(def test-namespaces
+  "Tests that must pass in Babashka (the production runtime)."
+  ['unit.rct-test
+   'unit.ansible-vault.core-test
+   'unit.ansible-vault.yamlstar-test
+   'unit.compoje.providers.ansible-vault-test])
+
 (defn run-tests [& _args]
-  (let [{:keys [fail error]}
-        (t/run-tests
-         'unit.rct-test)]
+  (let [{:keys [fail error]} (apply t/run-tests test-namespaces)]
     (when (or (pos? fail)
               (pos? error))
       (System/exit 1))))

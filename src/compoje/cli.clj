@@ -7,6 +7,7 @@
             [compoje.deploy.docker :as docker]
             [compoje.logging :as clog]
             [compoje.providers :as providers]
+            [compoje.providers.ansible-vault :as ansible-vault-p]
             [compoje.providers.vault :as vault-p]
             [compoje.render :as render]
             [compoje.utils :as u]
@@ -32,7 +33,8 @@
 (defn register-default-providers!
   "Register providers available for calling."
   []
-  (providers/register-provider! (vault-p/->VaultSecretsProvider)))
+  (providers/register-provider! (vault-p/->VaultSecretsProvider))
+  (providers/register-provider! (ansible-vault-p/->AnsibleVaultSecretsProvider)))
 
 (def docker-defaults
   "Defaults for docker deploy options.

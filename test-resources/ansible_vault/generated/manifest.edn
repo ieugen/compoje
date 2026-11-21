@@ -1,0 +1,55 @@
+{:generated-by "test/integration/gen_ansible_vault_fixtures.clj",
+ :ansible-core "2.21.6",
+ :cases
+ [{:name "v11-yaml",
+   :password-file "pw-ascii.txt",
+   :vault "v11-yaml.vault",
+   :plain "v11-yaml.plain"}
+  {:name "v12-dev",
+   :password-file "pw-ascii.txt",
+   :vault-id "dev",
+   :vault "v12-dev.vault",
+   :plain "v12-dev.plain"}
+  {:name "utf8-password",
+   :password-file "pw-utf8.txt",
+   :vault "utf8-password.vault",
+   :plain "utf8-password.plain"}
+  {:name "unicode",
+   :password-file "pw-ascii.txt",
+   :vault "unicode.vault",
+   :plain "unicode.plain"}
+  {:name "empty",
+   :password-file "pw-ascii.txt",
+   :vault "empty.vault",
+   :plain "empty.plain"}
+  {:name "block-16",
+   :password-file "pw-ascii.txt",
+   :vault "block-16.vault",
+   :plain "block-16.plain"}
+  {:name "block-32",
+   :password-file "pw-ascii.txt",
+   :vault "block-32.vault",
+   :plain "block-32.plain"}
+  {:name "binary",
+   :password-file "pw-ascii.txt",
+   :vault "binary.vault",
+   :plain "binary.plain"}
+  {:name "fixed-salt",
+   :password-file "pw-ascii.txt",
+   :salt "fixed-salt",
+   :vault "fixed-salt.vault",
+   :plain "fixed-salt.plain"}
+  {:name "fixed-salt-dev",
+   :password-file "pw-ascii.txt",
+   :salt "fixed-salt",
+   :vault-id "dev",
+   :vault "fixed-salt-dev.vault",
+   :plain "fixed-salt-dev.plain"}],
+ :inline
+ {:file "inline.yml",
+  :password-file "pw-ascii.txt",
+  :expected
+  {"plain" "value",
+   "db_password" "s3cret value",
+   "api_token" "üñíçødé",
+   "nested" {"list" [1 2]}}}}
