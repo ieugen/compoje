@@ -3,6 +3,7 @@
    [clojure.test :as t]
    [unit.ansible-vault.core-test]
    [unit.ansible-vault.yamlstar-test]
+   [unit.compoje.migrate-test]
    [unit.compoje.providers.ansible-vault-test]
    [unit.rct-test]))
 
@@ -11,6 +12,7 @@
   ['unit.rct-test
    'unit.ansible-vault.core-test
    'unit.ansible-vault.yamlstar-test
+   'unit.compoje.migrate-test
    'unit.compoje.providers.ansible-vault-test])
 
 (defn run-tests [& _args]

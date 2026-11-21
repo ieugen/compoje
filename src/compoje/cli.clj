@@ -6,6 +6,7 @@
             [compoje.context :as context]
             [compoje.deploy.docker :as docker]
             [compoje.logging :as clog]
+            [compoje.migrate :as migrate]
             [compoje.providers :as providers]
             [compoje.providers.ansible-vault :as ansible-vault-p]
             [compoje.providers.vault :as vault-p]
@@ -126,6 +127,24 @@
         (docker/deploy docker))))
   ::done)
 
+(defn migrate
+  "Migrate a stack directory from compoje.edn to x-compoje.
+
+  Reads <dir>/compoje.edn and adds its config to <dir>/stack.tpl.yml as an
+  x-compoje: section. compoje.edn is left in place: review the result, then
+  delete it. Fails if compoje.edn uses aero tags (#env, #or, ...), or if the
+  template already has an x-compoje section."
+  {:flags ["--dry-run" {:doc "Print the migrated stack.tpl.yml. Do not write it."
+                        :value true}]}
+  [{:keys [dir dry-run verbosity]}]
+  (set-hooman-logging! verbosity)
+  (let [result (migrate/migrate! dir {:dry-run dry-run})]
+    (if dry-run
+      (print result)
+      (log/info "Migrated" result "- review it, then delete"
+                (str (fs/file dir "compoje.edn")))))
+  ::done)
+
 (def cmdspec
   {:name "compoje"
    :doc "Templates for docker swarm stacks."
@@ -136,7 +155,8 @@
            "--deploy-driver DRIVER" {:doc "Deployment driver. Only docker is supported."
                                      :default "docker"
                                      :parse keyword}]
-   :commands ["deploy <stack-file>" #'deploy]})
+   :commands ["deploy <stack-file>" #'deploy
+              "migrate <dir>" #'migrate]})
 
 (defn- help-requested? [args]
   (some #{"-h" "--help" "help"} args))

@@ -10,7 +10,9 @@
 (defn- parse
   "Run the real cmdspec with deploy stubbed out; return the opts deploy receives."
   [& args]
-  (with-redefs [cli/deploy (fn [opts] (dissoc opts ::licli/sources ::licli/argv ::licli/command))]
+  (with-redefs [cli/deploy (fn [opts] (dissoc opts ::licli/sources ::licli/argv ::licli/command))
+                cli/migrate (fn [opts] (assoc (dissoc opts ::licli/sources ::licli/argv ::licli/command)
+                                              :command :migrate))]
     (licli/dispatch* (cmdspec/to-cmdspec cli/cmdspec) (vec args))))
 
 (deftest parse-test
@@ -32,6 +34,10 @@
   (testing "defaults"
     (is (= {:verbosity 0 :deploy-driver :docker :stack-file "f.yml"}
            (parse "deploy" "f.yml"))))
+
+  (testing "migrate"
+    (is (= {:command :migrate :verbosity 0 :deploy-driver :docker :dir "stacks/nginx" :dry-run true}
+           (parse "migrate" "--dry-run" "stacks/nginx"))))
 
   (testing "unknown flags are rejected (strict)"
     (is (thrown-with-msg? Exception #"Unknown flag: --nope"

@@ -17,7 +17,8 @@ Integration tests need a running Docker daemon (testcontainers): test/integratio
 - Tests that must also pass in Babashka are listed in test/bb_test_runner.clj; add new bb-relevant test namespaces there.
 
 ## Layout
-- src/compoje/cli.clj: entry point `compoje.cli/main` (bb task) / `-main` (JVM). Parsing, help and subcommands via lambdaisland/cli (`cmdspec`, strict flags); the `deploy` command's flags live in its var metadata. Option precedence: `docker-defaults` < x-compoje < `--set` < docker flags (`cli-config->context`). Commands return `::done`; `main` exits 1 otherwise (usage errors), unless help was asked for. Only the `deploy` command exists.
+- src/compoje/cli.clj: entry point `compoje.cli/main` (bb task) / `-main` (JVM). Parsing, help and subcommands via lambdaisland/cli (`cmdspec`, strict flags); the `deploy` command's flags live in its var metadata. Option precedence: `docker-defaults` < x-compoje < `--set` < docker flags (`cli-config->context`). Commands return `::done`; `main` exits 1 otherwise (usage errors), unless help was asked for. Commands: `deploy` and `migrate` (compoje.edn → x-compoje).
+- migrate.clj: `migrate!` moves an old compoje.edn into `<dir>/stack.tpl.yml` as `x-compoje:` (text prepended, template not re-parsed); fails on aero tags. compoje.edn is being phased out. See docs/migrate-from-compoje-edn.md.
 - config.clj: reads a YAML stack file and returns the map under its top-level `x-compoje:` key (legacy `compoje:` still read, with a warning), deep-merged with `--set` args.
 - context.clj: builds the render context (`:values`, `:secrets`, `:work-dir`, `:template-dir`, `:docker`).
 - providers.clj: `SecretsProvider` protocol + registry atom, `provide-secrets` (results keyed by keyword secret name), shared `secret->file!`. providers/vault.clj (HashiCorp Vault), providers/ansible_vault.clj (glue for the ansible-vault library). providers/file.clj is a stub.

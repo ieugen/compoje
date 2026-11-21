@@ -1,0 +1,5 @@
+{:docker {:stack #profile {:dev "nginx-dev" :prod "nginx"}}
+ :providers [{:name :my-vault
+              :type :compoje.providers.vault/vault
+              :addr #or [#env "VAULT_ADDR" "http://localhost:8200"]}]
+ :values {:resource-reservations-mem "128m"}}

@@ -1,0 +1,16 @@
+;; compoje.edn in the layout used before x-compoje (read with aero)
+{:docker {:stack "nginx"
+          :prune true}
+ :providers [{:name :my-vault
+              :type :compoje.providers.vault/vault
+              :addr "http://localhost:8200"}]
+ :secrets [{:name "cert"
+            :provider :my-vault
+            :local-path "nginx/cert.crt"
+            :spit-key :cert.crt
+            :mount-path "secret"
+            :secret-path "nginx"}]
+ :values {:resource-reservations-mem "128m"
+          :replicas 1
+          :cpus "4"
+          :features #{:gzip}}}

@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `migrate` command: `bb compoje migrate [--dry-run] <dir>` moves an old `compoje.edn` into the `x-compoje:` section of `<dir>/stack.tpl.yml`; stops on aero tags (`#env`, `#or`, ...). See docs/migrate-from-compoje-edn.md.
 - Quick start guide: docs/quick-start.md (install, first stack, dry-run, deploy, redeploy, overrides, troubleshooting).
 - ansible-vault secrets provider (`compoje.providers.ansible-vault/ansible-vault`): reads whole files encrypted with `ansible-vault encrypt` and YAML with inline `!vault` values; password from a file, an env var or `$ANSIBLE_VAULT_PASSWORD_FILE`. See docs/ansible-vault.md and `example-stacks/ansible-vault/`.
 - `ansible-vault.*` namespaces: a dependency-free Clojure implementation of the ansible-vault format (decrypt and encrypt, format 1.1/1.2, AES256), runs in Babashka, byte-compatible with ansible-core (verified by containerized cross-tests). Kept free of compoje code so it can become its own library.
