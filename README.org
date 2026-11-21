@@ -13,7 +13,7 @@ Hence this project.
 New to compoje? Start with the [[file:docs/quick-start.md][quick start guide]].
 Still using compoje.edn? See [[file:docs/migrate-from-compoje-edn.md][migrating from compoje.edn]].
 
-For documentation see [[docs/docs.org]].
+For all documentation see [[file:docs/README.md][docs/README.md]]: CLI, configuration, templates and secret providers.
 
 ** Features
 

@@ -1,5 +1,8 @@
 #+TITLE: Compoje documentation
 
+This file describes how compoje works internally.
+The user reference is in Markdown: [[file:README.md][docs/README.md]] (CLI, configuration, templates, providers).
+
 ** How compoje works
 
 Considering the call bellow:
@@ -83,7 +86,9 @@ x-compoje:
         memory: 20M
 #+END_SRC
 
-** TODO: Document config keys
+** Config keys
+
+All keys are documented in [[file:configuration.md][configuration.md]].
 
 *** Compoje context
 
@@ -91,7 +96,9 @@ Compoje builds a 'context' from configuration, cli args.
 It enhances the context with data from providers.
 It uses this context for rendering the template.
 
-*** TODO: Document context keys
+*** Context keys
+
+See "The rendering context" in [[file:configuration.md][configuration.md]].
 
 *** Compoje stack file
 
@@ -123,24 +130,25 @@ Examples of providers are:
 Compoje comes with some built-in providers.
 We might extend compoje to allow third party providers.
 
-** TODO: Document provider keys
+** Provider keys
 
-*** File
+All provider and secret keys, and how to write a custom provider, are in [[file:providers.md][providers.md]].
 
-Built-in provider with type and name compoje.providers.file .
-Load data from a file and make it available in the context.
+*** Ansible vault
 
-*** Asible vault
-
-Built-in provider with name compoje.providers.ansible-vault .
-Load data from a file encrypted using ansible vault specification
-
-*** HTTP
-
-Built-in provider with name compoje.providers.http .
-Load data from http(s) endpoint and make it available in the context
+Built-in provider with type compoje.providers.ansible-vault/ansible-vault .
+Load data from a file encrypted using ansible vault specification.
+See [[file:ansible-vault.md][ansible-vault.md]].
 
 *** Hashicorp vault
 
-Built-in provider with name compoje.providers.vault .
-Load data from an instance of Hashicorp Vault.
+Built-in provider with type compoje.providers.vault/vault .
+Load data from an instance of Hashicorp Vault (KV v2).
+
+*** File (planned)
+
+compoje.providers.file is an empty placeholder: not implemented, not registered.
+
+*** HTTP (idea)
+
+A provider to load data from an http(s) endpoint. Not implemented.

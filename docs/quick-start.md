@@ -243,5 +243,6 @@ One of them: compoje always renders the file named `stack.tpl.yml` next to the f
 
 - [example-stacks/](../example-stacks/): more examples (nginx, redis, ansible-vault)
 - [ansible-vault.md](ansible-vault.md): secrets from ansible-vault
-- [docs.org](docs.org): how compoje works and its configuration
+- [cli.md](cli.md), [configuration.md](configuration.md), [templates.md](templates.md),
+  [providers.md](providers.md): the full reference
 - [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md): upgrading stacks that still use `compoje.edn`

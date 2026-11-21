@@ -2,7 +2,7 @@
 
 compoje is a templating and deploy tool for Docker Swarm stacks, written in Clojure. **compoje is run with Babashka** (`bb compoje ...`, as a bb task here or in users' bb.edn); the JVM (deps.edn) is used for development, the REPL and the kaocha tests. It renders a compose-file template with Selmer, using a context built from config, CLI `--set` args and secret providers (HashiCorp Vault, ansible-vault). It then shells out to `docker stack deploy`. Configs and secrets get content hashes in their names, so changing a file creates a new immutable Swarm object.
 
-Documentation lives under docs/. Keep existing files in their current format (README.org and docs/docs.org are Org-mode; edit them as Org). **Write new documentation as Markdown files under docs/** (e.g. docs/known-issues.md, docs/dependency-updates.md).
+Documentation lives under docs/. Keep existing files in their current format (README.org and docs/docs.org are Org-mode; edit them as Org). docs/README.md is the documentation index; add new docs to it. **Write new documentation as Markdown files under docs/** (e.g. docs/known-issues.md, docs/dependency-updates.md).
 
 ## Commands
 - **Run tests with `bin/kaocha`** (the canonical test command; it wraps `clojure -M:test`). Extra args pass through to kaocha: `bin/kaocha unit`, `bin/kaocha integration`, `bin/kaocha --focus unit.compoje.render-test`, `bin/kaocha --watch`.
