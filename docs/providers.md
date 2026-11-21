@@ -1,12 +1,13 @@
 # Secret providers
 
-Providers fetch secrets (or any other data) when you deploy, and make them available to the template. Two built-in
+Providers fetch secrets (or any other data) when you deploy, and make them available to the template. Three built-in
 providers exist:
 
 | Type | Source | Details |
 |---|---|---|
 | `compoje.providers.ansible-vault/ansible-vault` | Files encrypted with `ansible-vault`, whole or with inline `!vault` values. No Ansible or server needed. | [below](#ansible-vault), [ansible-vault.md](ansible-vault.md) |
 | `compoje.providers.vault/vault` | [HashiCorp Vault](https://www.vaultproject.io/) KV version 2. | [below](#hashicorp-vault) |
+| `compoje.providers.file/file` | Plain (unencrypted) YAML, JSON, EDN or text files. | [below](#file) |
 
 You can also write your own; see [Custom providers](#custom-providers).
 
@@ -152,9 +153,46 @@ used in a template path; write them to a file with `spit-key` instead.
 
 If a secret can't be read, compoje logs the error and exits with a non-zero code.
 
-## File provider
+## File
 
-`compoje.providers.file` is an empty placeholder. It is not registered and does nothing yet.
+Type `compoje.providers.file/file`. Reads plain, unencrypted files: values shared between stacks, or secrets that are
+already on disk, e.g. written by CI or mounted by the host. The files are read as they are; for encrypted files use
+[ansible-vault](#ansible-vault).
+
+```yaml
+x-compoje:
+  providers:
+    - name: files
+      type: compoje.providers.file/file
+  secrets:
+    - name: common                    # <{ common.db.host }>
+      provider: files
+      file: shared/common.yml
+    - name: api-token                 # copied for a docker secret
+      provider: files
+      file: secrets/api-token.txt
+      local-path: generated/api-token.txt
+```
+
+Provider settings:
+
+| Key | Meaning |
+|---|---|
+| `dir` | Optional. Directory the secrets' `file` paths are relative to. Itself relative to the stack directory; `~` works. Default: the stack directory. |
+
+Secret settings:
+
+| Key | Meaning |
+|---|---|
+| `file` | The file. Relative to `dir`; absolute and `~` paths are used as given. Required. |
+| `format` | `yaml`, `json`, `edn` or `raw`. Default from the extension: `.yml`/`.yaml` → yaml, `.json` → json, `.edn` → edn, anything else → raw. |
+
+yaml and json files give a map (`<{ common.db.host }>`), edn gives the data as written, raw gives the text as one
+string (`<{ api-token }>`).
+
+With `local-path` and no `spit-key`, the file is copied unchanged. With `spit-key`, only that value is written.
+
+A runnable example: `example-stacks/file/` (`bb compoje deploy --dry-run example-stacks/file/stack.tpl.yml`).
 
 ## Custom providers
 

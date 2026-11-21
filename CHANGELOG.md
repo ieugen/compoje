@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- File provider (`compoje.providers.file/file`): loads plain YAML, JSON, EDN or text files (format from the extension), with optional `dir`, `local-path` and `spit-key`. See docs/providers.md and `example-stacks/file/`.
 - Reference documentation in docs/: cli.md, configuration.md, templates.md, providers.md (including custom providers), indexed in docs/README.md.
 - `migrate` command: `bb compoje migrate [--dry-run] <dir>` moves an old `compoje.edn` into the `x-compoje:` section of `<dir>/stack.tpl.yml`; stops on aero tags (`#env`, `#or`, ...). See docs/migrate-from-compoje-edn.md.
 - Quick start guide: docs/quick-start.md (install, first stack, dry-run, deploy, redeploy, overrides, troubleshooting).

@@ -241,7 +241,7 @@ One of them: compoje always renders the file named `stack.tpl.yml` next to the f
 
 ## Next steps
 
-- [example-stacks/](../example-stacks/): more examples (nginx, redis, ansible-vault)
+- [example-stacks/](../example-stacks/): more examples (nginx, redis, ansible-vault, file)
 - [ansible-vault.md](ansible-vault.md): secrets from ansible-vault
 - [cli.md](cli.md), [configuration.md](configuration.md), [templates.md](templates.md),
   [providers.md](providers.md): the full reference

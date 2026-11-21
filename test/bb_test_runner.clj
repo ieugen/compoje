@@ -5,6 +5,7 @@
    [unit.ansible-vault.yamlstar-test]
    [unit.compoje.migrate-test]
    [unit.compoje.providers.ansible-vault-test]
+   [unit.compoje.providers.file-test]
    [unit.rct-test]))
 
 (def test-namespaces
@@ -13,7 +14,8 @@
    'unit.ansible-vault.core-test
    'unit.ansible-vault.yamlstar-test
    'unit.compoje.migrate-test
-   'unit.compoje.providers.ansible-vault-test])
+   'unit.compoje.providers.ansible-vault-test
+   'unit.compoje.providers.file-test])
 
 (defn run-tests [& _args]
   (let [{:keys [fail error]} (apply t/run-tests test-namespaces)]

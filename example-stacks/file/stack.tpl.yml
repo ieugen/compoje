@@ -1,0 +1,32 @@
+x-compoje:
+  docker:
+    stack: file-example
+  providers:
+    - name: files
+      type: compoje.providers.file/file
+  secrets:
+    # plain YAML values, used in the template as <{ common.... }>
+    - name: common
+      provider: files
+      file: shared/common.yml
+    # a secret file already on disk (e.g. written by CI), copied for a docker secret
+    - name: api-token
+      provider: files
+      file: secrets/api-token.txt
+      local-path: generated/api-token.txt
+
+services:
+  app:
+    image: docker.io/nginx:stable
+    environment:
+      REGION: <{ common.region }>
+      LOG_LEVEL: <{ common.log-level }>
+      DB_URL: "postgres://<{ common.db.host }>:<{ common.db.port }>/app"
+    secrets:
+      - source: api_token
+        target: api_token
+
+secrets:
+  api_token:
+    file: generated/api-token.txt
+    name: api_token-<% file-hash 'generated/api-token.txt' %>

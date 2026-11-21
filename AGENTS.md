@@ -21,7 +21,7 @@ Integration tests need a running Docker daemon (testcontainers): test/integratio
 - migrate.clj: `migrate!` moves an old compoje.edn into `<dir>/stack.tpl.yml` as `x-compoje:` (text prepended, template not re-parsed); fails on aero tags. compoje.edn is being phased out. See docs/migrate-from-compoje-edn.md.
 - config.clj: reads a YAML stack file and returns the map under its top-level `x-compoje:` key (legacy `compoje:` still read, with a warning), deep-merged with `--set` args.
 - context.clj: builds the render context (`:values`, `:secrets`, `:work-dir`, `:template-dir`, `:docker`).
-- providers.clj: `SecretsProvider` protocol + registry atom, `provide-secrets` (results keyed by keyword secret name), shared `secret->file!`. providers/vault.clj (HashiCorp Vault), providers/ansible_vault.clj (glue for the ansible-vault library). providers/file.clj is a stub.
+- providers.clj: `SecretsProvider` protocol + registry atom, `provide-secrets` (results keyed by keyword secret name), shared `secret->file!`. providers/vault.clj (HashiCorp Vault), providers/ansible_vault.clj (glue for the ansible-vault library), providers/file.clj (plain yaml/json/edn/raw files). Path helpers `expand-home`/`resolve-path` live in providers.clj.
 - src/ansible_vault/ (`ansible-vault.core`, `.crypto`, `.yamlstar`): standalone ansible-vault format library (decrypt + encrypt). It must not require any compoje namespace; it is meant to be extracted. See docs/ansible-vault.md.
 - render.clj: Selmer rendering plus custom tags `file-hash`, `file-path`, `to-yaml` and the filter `hash-file`.
 - deploy/docker.clj: builds and shells out to the `docker stack deploy` command line.

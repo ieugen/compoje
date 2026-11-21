@@ -11,11 +11,11 @@ content hashes to config and secret names, and runs `docker stack deploy`.
   context
 - [templates.md](templates.md): template syntax, the `file-hash`, `file-path` and `to-yaml` tags, filters,
   `if`/`for`
-- [providers.md](providers.md): secret providers (ansible-vault, HashiCorp Vault) and writing your own
+- [providers.md](providers.md): secret providers (ansible-vault, HashiCorp Vault, plain files) and writing your own
 - [ansible-vault.md](ansible-vault.md): secrets in ansible-vault files, in detail
 - [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md): moving old `compoje.edn` stacks to `x-compoje:`
 - [known-issues.md](known-issues.md): known limitations and bugs
-- [../example-stacks/](../example-stacks/): example stacks (nginx, redis, ansible-vault)
+- [../example-stacks/](../example-stacks/): example stacks (nginx, redis, ansible-vault, file)
 
 ## Developing compoje
 

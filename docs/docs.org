@@ -145,9 +145,11 @@ See [[file:ansible-vault.md][ansible-vault.md]].
 Built-in provider with type compoje.providers.vault/vault .
 Load data from an instance of Hashicorp Vault (KV v2).
 
-*** File (planned)
+*** File
 
-compoje.providers.file is an empty placeholder: not implemented, not registered.
+Built-in provider with type compoje.providers.file/file .
+Load plain (unencrypted) YAML, JSON, EDN or text files and make them available in the context.
+See [[file:providers.md][providers.md]].
 
 *** HTTP (idea)
 

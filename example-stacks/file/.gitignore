@@ -1,0 +1,3 @@
+# copied secrets and rendered output contain secret values
+generated/
+stack.generated.yml

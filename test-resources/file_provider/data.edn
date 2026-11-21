@@ -1,0 +1,1 @@
+{:db {:host "db.internal" :port 5432} :password "p@ss: w0rd"}

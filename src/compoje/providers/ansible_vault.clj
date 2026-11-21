@@ -23,35 +23,10 @@
        spit-key: db_password"
   (:require [ansible-vault.core :as av]
             [ansible-vault.yamlstar :as avy]
-            [babashka.fs :as fs]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
             [clojure.walk :as walk]
             [compoje.providers :as providers]))
-
-(defn expand-home
-  "Expand a leading ~ to `home`."
-  [^String path home]
-  (if (or (= "~" path) (str/starts-with? path "~/"))
-    (str home (subs path 1))
-    path))
-
-(defn resolve-path
-  "Absolute paths and ~ paths as given, others relative to `base-dir`."
-  [base-dir path home]
-  (let [p (fs/path (expand-home path home))]
-    (str (if (fs/absolute? p) p (fs/path base-dir p)))))
-
-^:rct/test
-(comment
-  (expand-home "~/x/pw" "/home/u") ;=> "/home/u/x/pw"
-  (expand-home "~" "/home/u") ;=> "/home/u"
-  (expand-home "~other/pw" "/home/u") ;=> "~other/pw"
-  (expand-home "rel/pw" "/home/u") ;=> "rel/pw"
-  (resolve-path "/stack" "pw.txt" "/home/u") ;=> "/stack/pw.txt"
-  (resolve-path "/stack" "/etc/pw" "/home/u") ;=> "/etc/pw"
-  (resolve-path "/stack" "~/pw" "/home/u") ;=> "/home/u/pw"
-  )
 
 (defn read-password
   "Find the vault password for a provider config.
@@ -61,7 +36,7 @@
    (read-password config template-dir #(System/getenv %)))
   ([{:keys [password-file password-env name]} template-dir getenv]
    (let [home (System/getProperty "user.home")
-         from-file #(str/trim (slurp (resolve-path template-dir % home)))
+         from-file #(str/trim (slurp (providers/resolve-path template-dir % home)))
          password (cond
                     password-file (from-file password-file)
                     password-env (or (getenv password-env)
@@ -105,7 +80,7 @@
   [{:keys [file format name] :as _secret-spec} template-dir secrets]
   (when-not file
     (throw (ex-info (str "ansible-vault secret " name ": missing file") {:secret name})))
-  (let [path (resolve-path template-dir file (System/getProperty "user.home"))]
+  (let [path (providers/resolve-path template-dir file (System/getProperty "user.home"))]
     (log/debug "Decrypt ansible-vault secret" name "from" path)
     (decode-content (slurp path) format secrets)))
 

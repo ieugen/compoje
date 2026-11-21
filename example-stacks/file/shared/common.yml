@@ -1,0 +1,6 @@
+# Plain values shared between stacks
+region: eu-central
+log-level: info
+db:
+  host: db.internal
+  port: 5432

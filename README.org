@@ -124,8 +124,7 @@ Things that need to be done:
 - [X] Write some documentation and examples - once features are stable
 - [x] Implement functions to convert context values -> yaml structure like in helm
 - [ ] Implement stack initialization with compoje.edn + other files
-- [ ] Support compoje.yaml file
-- [ ] Implement file secret provider - similar to ansible-vault in functionality
+- [x] Implement file secret provider - similar to ansible-vault in functionality
 - [ ] Option to keep secrets after render (remove by default)
 - [ ] Attempt to support Compose Specification https://docs.docker.com/compose/compose-file/
 - [ ] Filter to escape $ in yaml - when rendering secrets

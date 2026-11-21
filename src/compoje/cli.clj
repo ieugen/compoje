@@ -9,6 +9,7 @@
             [compoje.migrate :as migrate]
             [compoje.providers :as providers]
             [compoje.providers.ansible-vault :as ansible-vault-p]
+            [compoje.providers.file :as file-p]
             [compoje.providers.vault :as vault-p]
             [compoje.render :as render]
             [compoje.utils :as u]
@@ -35,7 +36,8 @@
   "Register providers available for calling."
   []
   (providers/register-provider! (vault-p/->VaultSecretsProvider))
-  (providers/register-provider! (ansible-vault-p/->AnsibleVaultSecretsProvider)))
+  (providers/register-provider! (ansible-vault-p/->AnsibleVaultSecretsProvider))
+  (providers/register-provider! (file-p/->FileSecretsProvider)))
 
 (def docker-defaults
   "Defaults for docker deploy options.

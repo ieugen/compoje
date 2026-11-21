@@ -3,6 +3,7 @@
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
             [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.tools.logging :as log]
             [compoje.utils :as u]))
 
@@ -58,6 +59,30 @@
         ;; keyword key: Selmer resolves template paths (<{ name.key }>) by keyword
         (swap! results assoc (keyword name) result)))
     @results))
+
+(defn expand-home
+  "Expand a leading ~ to `home`."
+  [^String path home]
+  (if (or (= "~" path) (str/starts-with? path "~/"))
+    (str home (subs path 1))
+    path))
+
+(defn resolve-path
+  "Absolute paths and ~ paths as given, others relative to `base-dir`."
+  [base-dir path home]
+  (let [p (fs/path (expand-home path home))]
+    (str (if (fs/absolute? p) p (fs/path base-dir p)))))
+
+^:rct/test
+(comment
+  (expand-home "~/x/pw" "/home/u") ;=> "/home/u/x/pw"
+  (expand-home "~" "/home/u") ;=> "/home/u"
+  (expand-home "~other/pw" "/home/u") ;=> "~other/pw"
+  (expand-home "rel/pw" "/home/u") ;=> "rel/pw"
+  (resolve-path "/stack" "pw.txt" "/home/u") ;=> "/stack/pw.txt"
+  (resolve-path "/stack" "/etc/pw" "/home/u") ;=> "/etc/pw"
+  (resolve-path "/stack" "~/pw" "/home/u") ;=> "/home/u/pw"
+  )
 
 (defn secret-content
   "The content to write for a secret: the whole content, or only `spit-key`
