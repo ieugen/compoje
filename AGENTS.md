@@ -10,6 +10,7 @@ Documentation lives under docs/. Keep existing files in their current format (RE
 - Babashka tests: `bb test-bb` (all rich-comment-tests in src/ plus the namespaces listed in test/bb_test_runner.clj)
 - Format: `bb fmt check` / `bb fmt fix` (cljfmt). **Run `bb fmt fix` after every code change**, before tests and before handing work back; `bb fmt check` must be clean.
 - Outdated deps: `clojure -M:outdated` (antq)
+- Build the release jar: `bb build-jar` → target/compoje.jar (run with `bb target/compoje.jar`). Version: resources/compoje/VERSION (`compoje --version`). Releases: tag `vX.Y.Z`, see docs/releasing.md; CI and release workflows in .github/workflows/. Install channels (bb task, bbin via `:bbin/bin` in bb.edn, jar) are in docs/install.md. cljfmt is a `fmt` task extra-dep, so top-level bb.edn deps stay runtime-only.
 - Local Vault for REPL: `bb vault-dev` (root token `myroot`)
 - REPL: `:dev` alias (adds dev/, test/, test-resources/, portal)
 

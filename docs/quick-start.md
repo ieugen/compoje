@@ -32,26 +32,17 @@ compoje runs as a Babashka task. Create a project directory with a `bb.edn`:
 
 ```clojure
 ;; bb.edn
-{:deps {io.github.ieugen/compoje {:git/sha "<commit-sha>"}}
+{:deps {io.github.ieugen/compoje {:git/tag "v0.2.0" :git/sha "abc1234"}}
  :tasks {:requires ([compoje.cli :as cli])
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}
 ```
 
-Replace `<commit-sha>` with a full commit SHA from <https://github.com/ieugen/compoje>, for example the latest one:
+Take the tag and sha of the latest [release](https://github.com/ieugen/compoje/releases): each release's notes
+contain this line. The first run downloads compoje and its dependencies, which needs Java once. For a global
+`compoje` command, or a jar that needs only bb, see [install.md](install.md).
 
-```bash
-git ls-remote https://github.com/ieugen/compoje HEAD
-```
-
-If you have a local clone instead, point at it:
-
-```clojure
-{:deps {io.github.ieugen/compoje {:local/root "/path/to/compoje"}}
- ...}
-```
-
-Check that it works (the first run downloads dependencies):
+Check that it works:
 
 ```console
 $ bb compoje --help
@@ -59,10 +50,11 @@ NAME
   compoje  ——  Templates for docker swarm stacks.
 
 SYNOPSIS
-  compoje [-v | --verbose] [--deploy-driver DRIVER] [deploy] [<args>...]
+  compoje [-v | --verbose] [--deploy-driver DRIVER] [--version] [deploy | migrate] [<args>...]
 ...
 SUBCOMMANDS
   deploy <stack-file>   Deploy a stack template to a Docker Swarm cluster.
+  migrate <dir>         Migrate a stack directory from compoje.edn to x-compoje.
 ```
 
 `bb compoje deploy --help` lists all deploy options.

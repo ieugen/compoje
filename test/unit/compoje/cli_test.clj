@@ -49,6 +49,15 @@
       (is (nil? @result))
       (is (re-find #"Positional arguments missing: <stack-file>" out)))))
 
+(deftest version-test
+  (testing "version comes from resources/compoje/VERSION"
+    (is (re-matches #"\d+\.\d+\.\d+(-SNAPSHOT)?" (cli/version))))
+  (testing "--version prints it and does not dispatch"
+    (let [result (atom nil)
+          out (with-out-str (reset! result (cli/main "--version")))]
+      (is (= ::cli/done @result))
+      (is (= (str "compoje " (cli/version) "\n") out)))))
+
 (deftest deploy-context-test
   (testing "x-compoje docker config reaches the context, with defaults"
     (is (= {:stack "nginx"

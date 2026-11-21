@@ -6,6 +6,7 @@ content hashes to config and secret names, and runs `docker stack deploy`.
 ## Using compoje
 
 - [quick-start.md](quick-start.md): install compoje and deploy a first stack, step by step
+- [install.md](install.md): install and update compoje (bb task, bbin, jar)
 - [cli.md](cli.md): commands, flags, exit codes
 - [configuration.md](configuration.md): the stack file, the `x-compoje:` keys, precedence, `--set`, the rendering
   context
@@ -20,6 +21,7 @@ content hashes to config and secret names, and runs `docker stack deploy`.
 ## Developing compoje
 
 - [docs.org](docs.org): how compoje works internally
+- [releasing.md](releasing.md): how to publish a release
 - [dependency-updates.md](dependency-updates.md): dependency update tracker
 - [../AGENTS.md](../AGENTS.md): layout, commands and conventions of the code base
 - [../CHANGELOG.md](../CHANGELOG.md): changes per release

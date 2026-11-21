@@ -40,27 +40,21 @@ This is nice but sometimes not the best option.
 
 ** Installation and running
 
-*** Using compoje as a babashka task
+compoje runs on [[https://babashka.org/][babashka]]. Three ways to install it, all described in [[file:docs/install.md][docs/install.md]]:
 
-[[https://babashka.org/][babashka]] is a clojure scripting tool. It's a clojure language interpretor with fast startup.
-It's used for scripts and devops tasks.
-
-In your *bb.edn* you should add a dependency to the library and a task, named *compoje* in the file bellow:
+- as a task in your project's *bb.edn*, pinned to a release tag (recommended for repositories with stacks)
+- as a global =compoje= command with [[https://github.com/babashka/bbin][bbin]]
+- as =compoje.jar= from the [[https://github.com/ieugen/compoje/releases][GitHub releases]], which needs only bb (good for CI)
 
 #+BEGIN_SRC clojure
-;; Type bb tasks to see all tasks
-;; Type bb <task-name> or bb run <task-name> to run a task
-{:min-bb-version "1.0.0"
- :deps {io.github.ieugen/compoje {:git/sha "..."}}
+;; bb.edn
+{:deps {io.github.ieugen/compoje {:git/tag "v0.2.0" :git/sha "abc1234"}}
  :tasks {:requires ([compoje.cli :as cli])
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}
 #+END_SRC
 
-Once that is done you can deploy a compoje stack:
-
 #+BEGIN_SRC shell
-
 # display help (also works per command: bb compoje deploy --help)
 bb compoje --help
 
@@ -71,22 +65,7 @@ bb compoje deploy --dry-run example-stacks/nginx/stack.tpl.yml
 bb compoje deploy --stack my-stack example-stacks/nginx/stack.tpl.yml
 #+END_SRC
 
-#+BEGIN_SRC shell
-Deploy using: docker stack deploy --with-registry-auth --resolve-image always --compose-file /home/ieugen/proiecte/clojure/compoje/example-stacks/nginx/stack.generated.yml my-stack
-Creating service my-stack_nginx
-#+END_SRC
-
-Deploy options, lowest precedence first: built-in defaults, the =x-compoje:= config in the stack file,
-=--set path.in.config=value= overrides, then flags like =--stack=, =--context=, =--prune=,
-=--resolve-image= and =--[no-]with-registry-auth=.
-
-*** Using compoje via clojure deps.edn
-
-If you don't use babashka, you can run *compoje* via clojure deps.
-
-In your *deps.edn* file you should add an alias used to call compoje in your project.
-
-- TODO: write example
+See the [[file:docs/quick-start.md][quick start guide]] for a full walk-through, and [[file:docs/releasing.md][docs/releasing.md]] for how releases are made.
 
 ** Ideas
 
@@ -117,7 +96,7 @@ Things that need to be done:
 - [x] Implement deploy ?!
 - [x] Implement passing values via cli
 - [x] Implement vault secrets provider
-- [ ] Install / run via bbin ?!
+- [x] Install / run via bbin ?!
 - [x] Instruction on how to install and run via bb, clojure, clojure tools
 - [ ] Validate configuration, cli args? using spec / malli
 - [ ] Implement docker driver via contajners - avoid needing docker client

@@ -2,12 +2,14 @@
 ;; Type bb tasks to see all tasks
 ;; Type bb <task-name> or bb run <task-name> to run a task
 {:min-bb-version "1.3.183"
- :deps {compoje/compoje {:local/root "."}
-        dev.weavejester/cljfmt {:mvn/version "0.16.6"}}
+ :deps {compoje/compoje {:local/root "."}}
+ ;; bbin install io.github.ieugen/compoje --git/tag vX.Y.Z  ->  `compoje` on PATH
+ :bbin/bin {compoje {:main-opts ["-m" "compoje.cli"]}}
  :paths ["dev"]
- :tasks {:requires ([compoje.cli :as cli]
-                    [cljfmt.main :as fmt])
+ :tasks {:requires ([compoje.cli :as cli])
          fmt {:doc "Format code using cljfmt"
+              :extra-deps {dev.weavejester/cljfmt {:mvn/version "0.16.6"}}
+              :requires ([cljfmt.main :as fmt])
               :task (apply fmt/-main *command-line-args*)}
          vault-dev {:doc "Start vault in dev mode for REPL exploring."
                     :task (shell "vault server -dev -dev-root-token-id=myroot")}
@@ -17,5 +19,10 @@
                                io.github.matthewdowney/rich-comment-tests {:mvn/version "v1.0.5"}}
                   :extra-paths ["src" "test"]
                   :task bb-test-runner/run-tests}
+         ;; not named uberjar: a task would shadow bb's built-in uberjar command
+         build-jar {:doc "Build target/compoje.jar, runnable with: bb target/compoje.jar"
+                    :task (do (babashka.fs/create-dirs "target")
+                              (babashka.fs/delete-if-exists "target/compoje.jar")
+                              (shell "bb" "uberjar" "target/compoje.jar" "-m" "compoje.cli"))}
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}

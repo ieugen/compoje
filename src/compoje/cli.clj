@@ -1,6 +1,7 @@
 (ns compoje.cli
   "Command line interface for compoje, built on lambdaisland/cli."
   (:require [babashka.fs :as fs]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [compoje.config :as config]
             [compoje.context :as context]
@@ -147,6 +148,12 @@
                 (str (fs/file dir "compoje.edn")))))
   ::done)
 
+(defn version
+  "compoje version, from resources/compoje/VERSION (\"unknown\" if missing)."
+  []
+  (or (some-> (io/resource "compoje/VERSION") slurp str/trim not-empty)
+      "unknown"))
+
 (def cmdspec
   {:name "compoje"
    :doc "Templates for docker swarm stacks."
@@ -156,7 +163,8 @@
                             :default 0}
            "--deploy-driver DRIVER" {:doc "Deployment driver. Only docker is supported."
                                      :default "docker"
-                                     :parse keyword}]
+                                     :parse keyword}
+           "--version" "Print the compoje version and exit."]
    :commands ["deploy <stack-file>" #'deploy
               "migrate <dir>" #'migrate]})
 
@@ -169,17 +177,21 @@
 (defn main
   "Default entry point for the CLI app (used by the bb task).
 
-  Commands return ::done. lambdaisland/cli prints help and returns nil for
-  usage errors (no command, unknown command, missing <stack-file>); exit 1 in
-  that case so scripts can detect it. Parse errors and exceptions are
-  reported by lambdaisland/cli itself, which exits 1."
+  --version prints the version. Otherwise commands return ::done.
+  lambdaisland/cli prints help and returns nil for usage errors (no command,
+  unknown command, missing <stack-file>); exit 1 in that case so scripts can
+  detect it. Parse errors and exceptions are reported by lambdaisland/cli
+  itself, which exits 1."
   [& args]
-  (let [result (cli/dispatch (cmdspec/to-cmdspec cmdspec) (vec args))]
-    (when-not (or (= ::done result)
-                  (help-requested? args)
-                  (completion-command? args))
-      (System/exit 1))
-    result))
+  (if (some #{"--version"} args)
+    (do (println "compoje" (version))
+        ::done)
+    (let [result (cli/dispatch (cmdspec/to-cmdspec cmdspec) (vec args))]
+      (when-not (or (= ::done result)
+                    (help-requested? args)
+                    (completion-command? args))
+        (System/exit 1))
+      result)))
 
 (defn -main
   "JVM entry point: clojure -M -m compoje.cli ..."

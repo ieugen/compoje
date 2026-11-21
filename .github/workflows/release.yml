@@ -1,0 +1,94 @@
+name: Release
+
+# Push a tag vX.Y.Z (see docs/releasing.md) to publish a GitHub release with compoje.jar.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: DeLaGuardo/setup-clojure@13.7.0
+        with:
+          cli: 1.12.6.1673
+          bb: 1.13.219
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.deps.clj
+          key: deps-${{ hashFiles('deps.edn', 'bb.edn') }}
+
+      - name: VERSION matches the tag
+        run: |
+          version="$(tr -d '[:space:]' < resources/compoje/VERSION)"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "resources/compoje/VERSION is $version, tag is $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Tests
+        run: |
+          bb fmt check
+          bin/kaocha
+          bb test-bb
+
+      - name: Build the jar
+        run: |
+          bb build-jar
+          test "$(bb target/compoje.jar --version)" = "compoje $VERSION"
+          bb target/compoje.jar deploy --dry-run example-stacks/nginx/stack.tpl.yml > /dev/null
+          (cd target && sha256sum compoje.jar > compoje.jar.sha256)
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { found = 1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[^]]+\]: / { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "No '## [$VERSION]' section in CHANGELOG.md" >&2
+            exit 1
+          fi
+          sha="$(git rev-parse --short=7 HEAD)"
+          {
+            echo
+            echo "## Install"
+            echo
+            echo "Per project, in bb.edn:"
+            echo
+            echo '```clojure'
+            echo "{:deps {io.github.ieugen/compoje {:git/tag \"$GITHUB_REF_NAME\" :git/sha \"$sha\"}}}"
+            echo '```'
+            echo
+            echo "Global command, needs only Babashka:"
+            echo
+            echo '```bash'
+            echo "bbin install https://github.com/${GITHUB_REPOSITORY}/releases/download/$GITHUB_REF_NAME/compoje.jar"
+            echo '```'
+            echo
+            echo "See docs/install.md for all options."
+          } >> notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" target/compoje.jar target/compoje.jar.sha256 \
+            --title "compoje $VERSION" --notes-file notes.md

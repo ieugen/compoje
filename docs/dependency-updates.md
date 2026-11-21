@@ -58,6 +58,12 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
 - Step 13: with cljfmt 0.16.6, `bb fmt check` reports 11 files (src + test) with incorrect formatting,
   mostly consecutive blank lines and indentation. **Done:** formatted with `bb fmt fix` in its own commit (fc7f73e).
 
+### Later changes
+
+- 2026-11-22: removed `luposlip/json-schema` from deps.edn `:deps`. Nothing in src/, test/ or dev/ required it, and
+  it pulled JVM-only Java libraries into every install and uberjar. `metosin/malli` is kept on purpose, for the
+  planned config validation.
+
 Not reported by antq (already current): kaocha 1.91.1392, clj-test-containers 0.7.4, slf4j-timbre 0.4.1, bb spec.alpha git dep.
 
 ## When finished
