@@ -14,7 +14,7 @@ Documentation lives under docs/. Keep existing files in their current format (RE
 - Local Vault for REPL: `bb vault-dev` (root token `myroot`)
 - REPL: `:dev` alias (adds dev/, test/, test-resources/, portal)
 
-Integration tests need a running Docker daemon (testcontainers): test/integration/vault_test.clj starts `hashicorp/vault`; test/integration/ansible_vault_test.clj builds test-resources/ansible_vault/Dockerfile (ansible-core) and cross-checks encrypt/decrypt in both directions. Regenerate ansible-vault fixtures with `clojure -M:dev -m integration.gen-ansible-vault-fixtures`.
+Integration tests need a running Docker daemon (testcontainers): test/integration/vault_test.clj starts `hashicorp/vault`; test/integration/ansible_vault_test.clj builds test-resources/ansible_vault/Dockerfile (ansible-core) and cross-checks encrypt/decrypt in both directions. Regenerate ansible-vault fixtures with `clojure -M:dev -m integration.gen-ansible-vault-fixtures`. test/integration/docker_client_test.clj talks to the local daemon (unix socket, `docker system dial-stdio`). test/integration/swarm_engines_test.clj builds test-resources/swarm/dind/Dockerfile (privileged Docker-in-Docker swarm with TLS on 2376 and sshd; needs a local `ssh` client) and checks that `docker stack deploy` and the docker-api engine produce identical services/networks/secrets/configs for the reference stack, plus managed secrets over ssh dial-stdio, ssh socket forwarding and mutual TLS.
 - Tests that must also pass in Babashka are listed in test/bb_test_runner.clj; add new bb-relevant test namespaces there.
 
 ## Layout

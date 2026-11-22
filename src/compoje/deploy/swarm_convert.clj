@@ -498,11 +498,12 @@
                     cap_drop (assoc "CapabilityDrop" (capabilities cap_drop))
                     (get svc "ulimits") (assoc "Ulimits" (ulimits (get svc "ulimits"))))
         mode (get deploy "mode" "replicated")
+        ;; like the docker CLI, Resources and Placement are always sent (possibly empty)
         task (cond-> {"ContainerSpec" container
-                      "Networks" (service-networks stack svc-name networks network-defs)}
-               (get deploy "resources") (assoc "Resources" (resources (get deploy "resources")))
+                      "Networks" (service-networks stack svc-name networks network-defs)
+                      "Resources" (resources (get deploy "resources" {}))
+                      "Placement" (or (placement (get deploy "placement")) {})}
                (get deploy "restart_policy") (assoc "RestartPolicy" (restart-policy (get deploy "restart_policy")))
-               (get deploy "placement") (assoc "Placement" (placement (get deploy "placement")))
                logging (assoc "LogDriver" (cond-> {"Name" (get logging "driver")}
                                             (get logging "options") (assoc "Options" (get logging "options")))))
         ports (ports (get svc "ports"))]

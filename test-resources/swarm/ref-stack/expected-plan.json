@@ -179,12 +179,6 @@
             "MemoryBytes" : 67108864
           }
         },
-        "RestartPolicy" : {
-          "Condition" : "on-failure",
-          "Delay" : 5000000000,
-          "MaxAttempts" : 3,
-          "Window" : 120000000000
-        },
         "Placement" : {
           "Constraints" : [ "node.role == manager" ],
           "Preferences" : [ {
@@ -193,6 +187,12 @@
             }
           } ],
           "MaxReplicas" : 2
+        },
+        "RestartPolicy" : {
+          "Condition" : "on-failure",
+          "Delay" : 5000000000,
+          "MaxAttempts" : 3,
+          "Window" : 120000000000
         },
         "LogDriver" : {
           "Name" : "json-file",
@@ -301,7 +301,9 @@
         "Networks" : [ {
           "Target" : "ref_default",
           "Aliases" : [ "worker" ]
-        } ]
+        } ],
+        "Resources" : { },
+        "Placement" : { }
       },
       "Mode" : {
         "Global" : { }
