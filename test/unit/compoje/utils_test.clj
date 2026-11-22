@@ -1,5 +1,5 @@
 (ns unit.compoje.utils-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is run-test testing]]
             [compoje.utils :as u]))
 
 (deftest deep-merge-test

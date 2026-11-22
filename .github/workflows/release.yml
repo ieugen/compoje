@@ -71,6 +71,12 @@ jobs:
             echo
             echo "## Install"
             echo
+            echo "One line, as a \`compoje\` command (needs only Babashka):"
+            echo
+            echo '```bash'
+            echo "bb -e '(load-string (slurp \"https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$GITHUB_REF_NAME/install.clj\"))' --version $GITHUB_REF_NAME"
+            echo '```'
+            echo
             echo "Per project, in bb.edn:"
             echo
             echo '```clojure'

@@ -19,7 +19,8 @@ next version with `-SNAPSHOT`, e.g. `0.3.0-SNAPSHOT`.
 4. Check locally:
 
    ```bash
-   bb fmt check && bin/kaocha && bb test-bb
+   bb fmt check && bb lint && bin/kaocha && bb test-bb
+   NVD_API_KEY=... bb vuln-scan                       # or check the latest Vulnerabilities workflow run
    bb build-jar && bb target/compoje.jar --version    # compoje 0.2.0
    ```
 
@@ -34,7 +35,9 @@ next version with `-SNAPSHOT`, e.g. `0.3.0-SNAPSHOT`.
    - fails if `VERSION` doesn't match the tag
    - runs all tests and builds `compoje.jar`, then checks `compoje.jar --version` and a dry-run deploy
    - creates the GitHub release with `compoje.jar` and `compoje.jar.sha256`. The notes are the CHANGELOG section
-     plus install snippets with the tag and sha.
+     plus install snippets with the tag and sha, including the one-line installer pinned to the tag.
+
+   The one-line installer (`install.clj` on `main`) downloads these two assets by name, so keep the names.
 7. Set `VERSION` to the next snapshot (`0.3.0-SNAPSHOT`) and commit.
 
 ## If the release job fails

@@ -11,6 +11,40 @@
               :extra-deps {dev.weavejester/cljfmt {:mvn/version "0.16.6"}}
               :requires ([cljfmt.main :as fmt])
               :task (apply fmt/-main *command-line-args*)}
+         lint {:doc "Lint: clj-kondo (as a pod, all code incl. install.clj) and clojure-lsp diagnostics. Fails on findings."
+               :task (do (babashka.pods/load-pod 'clj-kondo/clj-kondo "2026.10.26")
+                         (let [run! (requiring-resolve 'pod.borkdude.clj-kondo/run!)
+                               print! (requiring-resolve 'pod.borkdude.clj-kondo/print!)
+                               {:keys [summary] :as result} (run! {:lint ["src" "test" "install.clj"]})]
+                           (print! result)
+                           (when (pos? (+ (:error summary) (:warning summary)))
+                             (System/exit 1)))
+                         (println "clojure-lsp diagnostics ...")
+                         (if (babashka.fs/which "clojure-lsp")
+                           (shell "clojure-lsp diagnostics")
+                           (clojure "-M:lsp diagnostics")))}
+         vuln-scan {:doc "Scan deps.edn dependencies (all aliases) for known vulnerabilities with clj-watson. With an NVD API key (NVD_API_KEY or CLJ_WATSON_NVD_API_KEY) uses the NVD database (dependency-check), else the GitHub Advisory Database (GITHUB_TOKEN). Force one with --nvd / --github."
+                    :task (let [args (set *command-line-args*)
+                                env (fn [k] (not-empty (System/getenv k)))
+                                nvd-key (or (env "CLJ_WATSON_NVD_API_KEY") (env "NVD_API_KEY"))
+                                strategy (cond (args "--github") :github
+                                               (args "--nvd") :nvd
+                                               nvd-key :nvd
+                                               :else :github)
+                                scan "-M:clj-watson scan -p deps.edn -a '*' -s -f"]
+                            (case strategy
+                              :nvd (do (when-not nvd-key
+                                         (println "Set NVD_API_KEY (https://nvd.nist.gov/developers/request-an-api-key).")
+                                         (System/exit 1))
+                                       (println "Scanning with the NVD database (the first run downloads it, several minutes) ...")
+                                       ;; the key goes through the environment, never the command line
+                                       (clojure {:extra-env {"CLJ_WATSON_NVD_API_KEY" nvd-key}}
+                                                (str scan " -t dependency-check")))
+                              :github (do (when-not (env "GITHUB_TOKEN")
+                                            (println "Set NVD_API_KEY for the NVD database, or GITHUB_TOKEN (a GitHub token; no scopes needed) for the GitHub Advisory Database.")
+                                            (System/exit 1))
+                                          (println "Scanning with the GitHub Advisory Database ...")
+                                          (clojure (str scan " -t github-advisory")))))}
          vault-dev {:doc "Start vault in dev mode for REPL exploring."
                     :task (shell "vault server -dev -dev-root-token-id=myroot")}
          test-bb {:doc "Run Babashka tests"

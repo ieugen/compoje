@@ -76,7 +76,7 @@
    (let [len (alength data)
          n (- size (mod len size))
          out (Arrays/copyOf data (int (+ len n)))]
-     (Arrays/fill out (int len) (int (+ len n)) (unchecked-byte n))
+     (Arrays/fill out len (int (+ len n)) (unchecked-byte n))
      out)))
 
 (defn pkcs7-unpad

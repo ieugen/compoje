@@ -1,0 +1,53 @@
+name: Vulnerabilities
+
+# Scan deps.edn dependencies (all aliases) with clj-watson (`bb vuln-scan`):
+# the NVD database when the NVD_API_KEY secret is set, else the GitHub Advisory Database. Separate from CI so a newly published
+# advisory doesn't fail unrelated pull requests; runs weekly, on demand, and
+# when dependencies change.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [deps.edn, bb.edn]
+  pull_request:
+    paths: [deps.edn, bb.edn]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: DeLaGuardo/setup-clojure@13.7.0
+        with:
+          cli: 1.12.6.1673
+          bb: 1.13.219
+
+      # ~/.m2 also holds the NVD database (dependency-check-utils/<v>/data). A per-run key with a
+      # prefix fallback restores the newest copy and saves the updated one, so runs only fetch NVD changes.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.deps.clj
+          key: vuln-${{ github.run_id }}
+          restore-keys: vuln-
+
+      # With the NVD_API_KEY repository secret: NVD database (dependency-check).
+      # Without it: GitHub Advisory Database with the workflow's token.
+      - name: Scan dependencies
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bb vuln-scan

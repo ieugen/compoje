@@ -66,6 +66,28 @@ only confirm compatibility. The JVM tests (`bin/kaocha`) exercise the new versio
 
 Not reported by antq (already current): kaocha 1.91.1392, clj-test-containers 0.7.4, slf4j-timbre 0.4.1, bb spec.alpha git dep.
 
+## Vulnerability scanning
+
+`bb vuln-scan` checks every deps.edn dependency (all aliases) with
+[clj-watson](https://github.com/clj-holmes/clj-watson), and suggests fixes:
+
+- With an NVD API key (`NVD_API_KEY`, or `CLJ_WATSON_NVD_API_KEY`) it uses the NVD database (OWASP
+  dependency-check, matches by CPE). The first run downloads the database into
+  `~/.m2/repository/org/owasp/dependency-check-utils/<version>/data/` (several minutes); later runs only fetch
+  changes. The key is passed through the environment, never on the command line.
+- Otherwise it uses the GitHub Advisory Database (matches by package name) and needs a `GITHUB_TOKEN` (any token,
+  no scopes).
+- `--nvd` / `--github` force one.
+
+```bash
+NVD_API_KEY=... bb vuln-scan          # e.g. with the key in your shell profile or a password manager
+```
+
+CI runs it weekly, on demand and when deps.edn or bb.edn change (.github/workflows/vulnerabilities.yml). Add the
+key as the repository secret `NVD_API_KEY` (Settings → Secrets and variables → Actions) to use NVD there; without
+it CI uses the GitHub Advisory Database. A finding is fixed like any other update: one dependency per step, tracked
+here. bb.edn's dev-only deps (cljfmt, test helpers) are not scanned.
+
 ## When finished
 
 Completed 2026-11-21: all 17 rows done, none held back. `clojure -M:outdated` reports

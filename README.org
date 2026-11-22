@@ -40,7 +40,13 @@ This is nice but sometimes not the best option.
 
 ** Installation and running
 
-compoje runs on [[https://babashka.org/][babashka]]. Three ways to install it, all described in [[file:docs/install.md][docs/install.md]]:
+compoje runs on [[https://babashka.org/][babashka]]. Quick install, one line (installs a =compoje= command in =~/.local/bin=):
+
+#+BEGIN_SRC shell
+bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))'
+#+END_SRC
+
+Other ways to install it, all described in [[file:docs/install.md][docs/install.md]]:
 
 - as a task in your project's *bb.edn*, pinned to a release tag (recommended for repositories with stacks)
 - as a global =compoje= command with [[https://github.com/babashka/bbin][bbin]]

@@ -9,6 +9,7 @@
    Uses yamlstar internals (parser/composer/resolver/constructor) as of
    org.yamlstar/yamlstar 0.1.23; re-check when upgrading yamlstar."
   (:require [ansible-vault.core :as vault]
+            [clojure.string :as str]
             [clojure.walk :as walk]
             [yamlstar.composer :as composer]
             [yamlstar.constructor :as constructor]
@@ -73,9 +74,9 @@
 (comment
   (load-yaml (str "plain: 1\nsecret: !vault |\n"
                   (->> (vault/encrypt "s3cret" "pw")
-                       clojure.string/split-lines
+                       str/split-lines
                        (map #(str "  " %))
-                       (clojure.string/join "\n"))
+                       (str/join "\n"))
                   "\n")
              "pw")
   ;=> {"plain" 1, "secret" "s3cret"}

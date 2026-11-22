@@ -28,6 +28,15 @@ This guide takes you from nothing to a deployed stack in a few minutes.
 
 ## Install
 
+The quickest way, if you just want a `compoje` command:
+
+```bash
+bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))'
+```
+
+Then use `compoje ...` wherever this guide says `bb compoje ...`. For stacks kept in a repository, pin compoje
+per project instead, as below.
+
 compoje runs as a Babashka task. Create a project directory with a `bb.edn`:
 
 ```clojure

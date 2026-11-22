@@ -1,7 +1,6 @@
 (ns compoje.context
   "Functions to manage context"
-  (:require [babashka.fs :as fs]
-            [clojure.tools.logging :as log]
+  (:require [clojure.tools.logging :as log]
             [compoje.utils :as u]))
 
 ;; TODO: consider whether we should use directory name as default stack name
@@ -71,14 +70,9 @@
   (let [cwd (System/getProperty "user.dir")]
     (apply u/deep-merge (assoc config :work-dir cwd) more)))
 
-(defn enhanced-context
-  "Enhance the context with provider data"
-  [context provider-data]
-  (u/deep-merge context provider-data))
-
 (comment
 
-  (config->context "data/stacks/nginx" {} {})
+  (config->context {:values {:a 1}} {:template-dir "example-stacks/nginx"})
 
   (u/deep-merge {} {:a "b"})
   (u/deep-merge {} {:a "b"} {:c "d"}))

@@ -10,6 +10,7 @@
    - ssh socket forwarding and mutual TLS transports."
   (:require [babashka.fs :as fs]
             [babashka.process :as p]
+            [cheshire.core]
             [clj-test-containers.core :as tc]
             [clojure.data :as data]
             [clojure.string :as str]

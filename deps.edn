@@ -36,6 +36,12 @@
                                org.slf4j/jcl-over-slf4j {:mvn/version "2.0.20"}
                                org.slf4j/jul-to-slf4j {:mvn/version "2.0.20"}
                                org.slf4j/log4j-over-slf4j {:mvn/version "2.0.20"}}}
+           ;; clojure-lsp diagnostics (clj-kondo + unused public vars etc.); used by `bb lint`
+           :lsp {:replace-deps {com.github.clojure-lsp/clojure-lsp-standalone {:mvn/version "2026.10.15-11.42.38"}}
+                 :main-opts ["-m" "clojure-lsp.main"]}
+           ;; vulnerability scan of dependencies; used by `bb vuln-scan` (needs GITHUB_TOKEN)
+           :clj-watson {:replace-deps {io.github.clj-holmes/clj-watson {:git/tag "v6.2.0" :git/sha "c0dcdf3"}}
+                        :main-opts ["-m" "clj-watson.cli"]}
            :outdated {:deps {com.github.liquidz/antq {:mvn/version "RELEASE"}
                              org.slf4j/slf4j-simple {:mvn/version "2.0.20"}}
                       :main-opts ["-m" "antq.core"]}}}

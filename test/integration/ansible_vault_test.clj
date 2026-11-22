@@ -61,7 +61,7 @@
           [label plaintext] plaintexts]
     (testing (str label " " pw-file " vault-id=" vault-id)
       (let [vaulttext (av/encrypt plaintext password {:vault-id vault-id})
-            {:keys [exit-code stderr plaintext] :as r} (h/decrypt-file *c* vaulttext pw-file {:vault-id vault-id})]
+            {:keys [exit-code stderr plaintext]} (h/decrypt-file *c* vaulttext pw-file {:vault-id vault-id})]
         (is (zero? exit-code) stderr)
         (is (Arrays/equals (->bytes (get plaintexts label)) ^bytes plaintext))))))
 

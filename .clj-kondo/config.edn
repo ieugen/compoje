@@ -1,1 +1,4 @@
-{:lint-as {compoje.docker.client/with-connection clojure.core/with-open}}
+{:lint-as {compoje.docker.client/with-connection clojure.core/with-open}
+ :linters {;; clojure-lsp: called from bb.edn (test-bb task) and from the REPL
+           :clojure-lsp/unused-public-var {:exclude #{bb-test-runner/run-tests
+                                                      unit.compoje.deploy.swarm-convert-test/regenerate!}}}}

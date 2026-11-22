@@ -1,6 +1,7 @@
 (ns compoje.logging
   "Output"
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [taoensso.timbre :as timbre]))
 
 (defn default-output-msg-fn
   "(fn [data]) -> string, used by `default-output-fn` to generate output
@@ -27,4 +28,4 @@
 
 (comment
   ;; use our clean log formatting fn
-  (taoensso.timbre/merge-config! {:output-fn output-fn}))
+  (timbre/merge-config! {:output-fn output-fn}))

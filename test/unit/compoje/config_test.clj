@@ -1,5 +1,5 @@
 (ns unit.compoje.config-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is run-tests testing]]
             [compoje.config :as c]))
 
 (deftest config-test

@@ -27,10 +27,15 @@ jobs:
             ~/.m2/repository
             ~/.gitlibs
             ~/.deps.clj
+            ~/.babashka/pods
           key: deps-${{ hashFiles('deps.edn', 'bb.edn') }}
 
       - name: Format
         run: bb fmt check
+
+      # clj-kondo (pod) + clojure-lsp diagnostics; fails on findings
+      - name: Lint
+        run: bb lint
 
       # unit + integration; integration tests start containers on the runner's Docker
       - name: JVM tests

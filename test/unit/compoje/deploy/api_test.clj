@@ -1,6 +1,7 @@
 (ns unit.compoje.deploy.api-test
   "compoje.deploy.api against a fake Docker daemon (unit.compoje.docker.fake-server)."
-  (:require [cheshire.core :as json]
+  (:require [babashka.fs]
+            [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [compoje.deploy.api :as api]
