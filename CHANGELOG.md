@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-23
+
 ### Changed
 - **Breaking:** provider results are under `secrets` in templates again, `<{ secrets.<name>.<key> }>` (and `x-compoje: {from: secrets.<name>.<key>}`), as in compoje.edn stacks, so a secret name can never overwrite another context key. 0.3.0 had them at the top level (`<{ <name>.<key> }>`). `compoje migrate <dir>` rewrites 0.3.0 references in the stack file and in `x-compoje: {template: ...}` files. The check that rejected secret names like `values` is gone, as names can no longer collide.
 
