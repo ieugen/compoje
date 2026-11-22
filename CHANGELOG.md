@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+
+
+## [0.3.0] - 2026-11-23
+
 ### Added
 - Validation of the `x-compoje` configuration (malli) in `deploy` and `render`: unknown or mistyped keys with "did you mean", allowed values, required provider/secret settings for the built-in providers, undeclared providers, duplicate names, secret names that would overwrite context keys. All problems are reported at once. See docs/configuration.md, "Validation".
 - `init` command: `bb compoje init [--stack NAME] [--force] <dir>` scaffolds a stack directory (stack.tpl.yml with an x-compoje section, an nginx service with an in-memory templated config, html/index.html, .gitignore). See docs/cli.md.
