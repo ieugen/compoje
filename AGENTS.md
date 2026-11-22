@@ -33,7 +33,7 @@ Integration tests need a running Docker daemon (testcontainers): test/integratio
 - deploy/swarm_convert.clj: compose → Swarm API specs for the docker-api engine (pure; mirrors docker/cli convert). `parse-stack` reads leading-zero ints as octal (YAML 1.1, like docker). Unsupported keys error via `validate`'s whitelist `schema`. test-resources/swarm/ref-stack/stack.yml covers every supported key; its expected-plan.json was verified identical to `docker stack deploy` output (regenerate with `swarm-convert-test/regenerate!` and re-check against docker). deploy/interpolate.clj does compose `${VAR}` substitution (as docker stack deploy) before conversion; deploy/api.clj applies the plan over compoje.docker.client; deploy/registry_auth.clj builds X-Registry-Auth. Engines: `--deploy-driver` / `x-compoje docker.driver` → `docker-cli` (default) or `docker-api`.
 - deploy/docker.clj: builds and shells out to the `docker stack deploy` command line.
 - utils.clj: `deep-merge`, `set-args->map`, misc.
-- compose-spec/: compose JSON schema. example-stacks/: sample stacks.
+- example-stacks/: sample stacks.
 
 Deploy flow: `deploy-context` (`cli-config->context` → `providers/provide-secrets` → `context/final-context`) → `render/render <template-dir>/stack.tpl.yml` → `docker/deploy` pipes it to `docker stack deploy --compose-file -` (run in the template dir); the rendered stack is never written to disk (`compoje render [-o FILE]` prints/saves it). Logs go to stderr, data to stdout.
 

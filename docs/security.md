@@ -41,6 +41,9 @@ You write something to disk only when you ask for it:
   Give such secrets an explicit `name` (e.g. `db_password-v3`) and change it yourself when the value changes.
 - Environment variables (`environment:` with `<{ app.password }>`) are visible in `docker service inspect` and to
   anyone who can inspect the containers. Prefer Docker secrets (files under `/run/secrets`) for real secrets.
+- A secret value rendered into the stack without `|yaml-str` can be silently changed: docker substitutes `$VAR` in
+  the stack, and YAML special characters alter or break it. See
+  [templates.md, Escaping values](templates.md#escaping-values).
 
 ## Reaching the swarm
 

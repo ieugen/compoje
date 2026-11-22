@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Template filters `yaml-str` (quote and escape a value for YAML, including `$`) and `escape-dollar` (`$` → `$$`), so secret values survive YAML and docker's variable substitution unchanged. See docs/templates.md, "Escaping values".
 - Development: `bb lint` (clj-kondo + clojure-lsp diagnostics, run in CI) and `bb vuln-scan` (clj-watson: NVD database with an NVD API key, else the GitHub Advisory Database; weekly CI workflow), with `dependency-check-suppressions.xml` for reviewed findings, and `bb deps-why <group/artifact>` to see which dependency pulls a library in (including shaded copies inside other jars). `bb fmt` now also covers `script/` and `install.clj`.
 - One-line installer: `bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))'` installs the latest release as a `compoje` command (checksum-verified jar in `~/.local/share/compoje`, launcher in `~/.local/bin`); options `--version`, `--dir`, `--uninstall`. See docs/install.md.
 - `docker-api` deploy engine (`--deploy-driver docker-api` or `x-compoje docker.driver: docker-api`): deploys through the Docker Swarm API directly, so the docker CLI is not needed. Reaches remote swarms through your docker contexts (`ssh://` via `docker system dial-stdio` on the remote host, or socket forwarding with `docker.ssh-mode: forward`; `tcp://` with mutual TLS). Creates the same services, networks, secrets and configs as `docker stack deploy` for a common subset of compose keys and fails on the others; supports `--prune`, `--resolve-image` (digest pinning) and `--with-registry-auth` (docker config.json and credential helpers), and substitutes `${VAR}` variables like docker. `docker-cli` stays the default. See docs/engines.md.
@@ -20,6 +21,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `deploy --dry-run` prints provider results as `<redacted>` in the context, writes logs to stderr and the rendered stack to stdout.
 - Logs go to stderr; stdout carries only data (the rendered stack).
 - `migrate` converts provider secrets written to files (`local-path` used by a `file:` secret/config definition) into Docker secrets created from memory (`x-compoje: {from: ...}`), and also works on stacks that already use `x-compoje` (no `compoje.edn`). Secrets it can't convert safely are left as they are and reported.
+
+### Removed
+- The unused `compose-spec/compose-spec.json` schema.
 
 ## [0.2.0] - 2026-11-22
 

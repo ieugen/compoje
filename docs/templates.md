@@ -25,14 +25,16 @@ Output is not HTML-escaped: `<{ x }>` writes the value as it is.
 ```yaml
 replicas: <{ values.replicas }>
 image: "registry.example.com/web:<{ values.tag }>"
-password: <{ app.db_password }>     # a secret named "app"
+password: <{ app.db_password|yaml-str }>   # a secret named "app", safely quoted
 stack: <{ docker.stack }>
 ```
 
 - Dots walk into maps: `<{ values.resources.limits.cpus }>`.
 - A missing key renders as an empty string. It is not an error.
 - Use YAML quotes when a value could change type or break the YAML, e.g. `"<{ values.tag }>"` for a tag like
-  `1.10` or a value containing `: `.
+  `1.10`.
+- For values you don't control (secrets, provider results), use `|yaml-str`: it quotes and escapes the value, so
+  `:`, `#`, quotes, newlines and `$` survive. See [Escaping values](#escaping-values).
 
 ## Filters
 
@@ -46,6 +48,29 @@ log-level: <{ values.log-level|default:"info" }>
 compoje adds the filter `hash-file`: `<{ values.path|hash-file }>` renders the full MD5 hex digest of the file
 whose path is in the value. The path is relative to the **current directory**, not to the stack file. For config
 names, prefer the `file-hash` tag.
+
+### Escaping values
+
+The rendered stack is still a compose file, so two things can change a value on its way to the service:
+
+- **YAML.** A value with `: `, ` #`, quotes or a newline breaks the YAML, or turns into something else.
+- **Variable substitution.** Docker (both engines) replaces `$VAR` and `${VAR}` in the stack with environment
+  variables, so `pa$word` becomes `pa` plus the value of `$word` (usually nothing), and `${...}` forms it doesn't
+  know are an error.
+
+| Filter | Output for `pa$word: x#y "q"` | Use |
+|---|---|---|
+| `yaml-str` | `"pa$$word: x#y \"q\""` | Any value you don't control: write it unquoted, `KEY: <{ app.secret\|yaml-str }>`. Quotes and escapes for YAML, and doubles `$`. |
+| `escape-dollar` | `pa$$word: x#y "q"` | Only doubles `$` (docker turns `$$` back into `$`). You do the YAML quoting, e.g. `'<{ x\|escape-dollar }>'` for values without `'`. |
+
+```yaml
+environment:
+  DB_PASSWORD: <{ app.db_password|yaml-str }>
+```
+
+Both give the service the exact value with either engine. For secrets, prefer a Docker secret
+([`x-compoje: {from: ...}`](configuration.md#secrets-and-configs-from-memory)): the value never goes through the
+YAML, nor docker's substitution, nor `docker service inspect`.
 
 ## compoje tags
 

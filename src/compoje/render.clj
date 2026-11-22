@@ -1,5 +1,7 @@
 (ns compoje.render
   (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
+            [clojure.string :as str]
             [compoje.utils :as u]
             [clojure.tools.logging :as log]
             [selmer.filters :refer [add-filter!]]
@@ -27,6 +29,37 @@
      (hash-string contents digest))))
 
 (add-filter! :hash-file hash-file)
+
+(defn escape-dollar
+  "Escape $ as $$, so docker's compose variable substitution (both engines)
+   gives back the value as it is: `<{ app.password|escape-dollar }>`."
+  [v]
+  (when (some? v) (str/replace (str v) "$" "$$")))
+
+^:rct/test
+(comment
+  (escape-dollar "pa$word ${HOME}") ;=> "pa$$word $${HOME}"
+  (escape-dollar 42) ;=> "42"
+  (escape-dollar nil) ;=> nil
+  )
+
+(add-filter! :escape-dollar escape-dollar)
+
+(defn yaml-str
+  "Render a value as a double-quoted YAML scalar (JSON string syntax, which is
+   valid YAML), with $ escaped: survives :, #, quotes, newlines and docker's
+   variable substitution. `password: <{ app.password|yaml-str }>`."
+  [v]
+  (when (some? v) (json/generate-string (escape-dollar v))))
+
+^:rct/test
+(comment
+  (yaml-str "pa$word: x#y \"q\"") ;=> "\"pa$$word: x#y \\\"q\\\"\""
+  (yaml-str "line1\nline2") ;=> "\"line1\\nline2\""
+  (yaml-str 5) ;=> "\"5\""
+  )
+
+(add-filter! :yaml-str yaml-str)
 
 (defn file-path
   [args context-map]

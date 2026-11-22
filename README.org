@@ -73,43 +73,26 @@ bb compoje deploy --stack my-stack example-stacks/nginx/stack.tpl.yml
 
 See the [[file:docs/quick-start.md][quick start guide]] for a full walk-through, and [[file:docs/releasing.md][docs/releasing.md]] for how releases are made.
 
-** Ideas
+** Roadmap
 
-- Try to implement/follow [[https://github.com/compose-spec/compose-spec][Compose specification]]
-- Use yaml format since to appeal to a broader audience.
-- Read compoje configuration from the template file - under **x-compoje** key since compose will ignore keys that start with "x-".
-See https://docs.docker.com/compose/compose-file/11-extension/ .
-- Implement a file based secrets provider (compatible with ansible vault ?!) for people who don't use / need vault .
+Still to do, in order (details in [[file:docs/known-issues.md][docs/known-issues.md]] where noted):
 
-** Ansible vault implementation
+- [ ] =compoje init <dir>= to scaffold a new stack directory (replaces the old "stack initialization with compoje.edn" item)
+- [ ] Validate the =x-compoje= configuration with malli: unknown keys, missing provider references, secret names that
+  clash with context keys
+- [ ] Deprecate the provider =local-path= option (it writes secrets to disk); =compoje migrate= already converts it
+- [ ] Known issues: render the stack file that was passed instead of always =stack.tpl.yml=; the HashiCorp Vault
+  provider should throw instead of exiting the process
 
-A secret provider useful for smaller, independent deployments or bootstrapping.
-Does not require any running services.
+Done or dropped:
 
-#+BEGIN_SRC shell
-# encrypt file with ansible vault for test
-ansible-vault create --vault-id compoje@test/resources/ansible_vault/password01.txt  test/resources/ansible_v
-ault/example01.crypt.yml
-
-#+END_SRC
-
-** TODOs
-
-Things that need to be done:
-
-*** TODO Implement basic functionality
-- [x] Implement render /dry run
-- [x] Implement deploy ?!
-- [x] Implement passing values via cli
-- [x] Implement vault secrets provider
-- [x] Install / run via bbin ?!
-- [x] Instruction on how to install and run via bb, clojure, clojure tools
-- [ ] Validate configuration, cli args? using spec / malli
-- [-] Implement docker driver via contajners - avoid needing docker client
-- [X] Write some documentation and examples - once features are stable
-- [x] Implement functions to convert context values -> yaml structure like in helm
-- [ ] Implement stack initialization with compoje.edn + other files
-- [x] Implement file secret provider - similar to ansible-vault in functionality
-- [ ] Option to keep secrets after render (remove by default)
-- [ ] Attempt to support Compose Specification https://docs.docker.com/compose/compose-file/
-- [ ] Filter to escape $ in yaml - when rendering secrets
+- Render, dry run, deploy, =--set= values, HashiCorp Vault, ansible-vault and file providers, documentation and
+  examples, the =to-yaml= tag, installation via bb, bbin and a one-line installer.
+- Escaping secret values in templates: the =escape-dollar= and =yaml-str= filters
+  ([[file:docs/templates.md][docs/templates.md]]).
+- Deploying without the docker client: the =docker-api= engine ([[file:docs/engines.md][docs/engines.md]]).
+  contajners was considered and not used: it has no SSH transport and shells out to curl on babashka.
+- Keeping secrets after render: secrets no longer need files (=x-compoje: {from: ...}=), see
+  [[file:docs/security.md][docs/security.md]].
+- Supporting the Compose Specification: =docker stack deploy= has its own compose schema and rejects newer
+  compose-spec keys; compoje passes the file through (=docker-cli=) or supports a documented subset (=docker-api=).
