@@ -126,4 +126,5 @@ services:
       #
 ```
 
-Validate the rendered stack with `docker stack config -c stack.generated.yml`.
+Validate the rendered stack with `bb compoje render stack.tpl.yml | docker stack config -c -`, run in the stack's
+directory.

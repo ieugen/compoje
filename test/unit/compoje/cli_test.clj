@@ -1,5 +1,6 @@
 (ns unit.compoje.cli-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [babashka.fs :as fs]
+            [clojure.test :refer [deftest is testing]]
             [compoje.cli :as cli]
             [compoje.deploy.docker :as docker]
             [lambdaisland.cli :as licli]
@@ -63,9 +64,7 @@
     (is (= {:stack "nginx"
             :resolve-image "always"
             :with-registry-auth true}
-           (-> (cli/deploy-context {:stack-file nginx})
-               :docker
-               (dissoc :compose-file)))))
+           (:docker (cli/deploy-context {:stack-file nginx})))))
 
   (testing "precedence: defaults < x-compoje < --set < CLI flags"
     (let [docker (:docker (cli/deploy-context {:stack-file nginx
@@ -82,12 +81,26 @@
   (testing "the docker command has the stack name"
     (let [docker (:docker (cli/deploy-context {:stack-file nginx}))]
       (is (= ["docker" "stack" "deploy" "--with-registry-auth" "--resolve-image" "always"
-              "--compose-file" (:compose-file docker) "nginx"]
+              "--compose-file" "-" "nginx"]
              (docker/deploy-args docker))))))
 
 (deftest deploy-args-test
   (is (= ["docker" "--context" "remote" "stack" "deploy" "--resolve-image" "never" "--prune"
-          "--compose-file" "/tmp/s.yml" "web"]
+          "--compose-file" "-" "web"]
          (docker/deploy-args {:context "remote" :stack "web" :resolve-image "never"
-                              :prune true :with-registry-auth false
-                              :compose-file "/tmp/s.yml"}))))
+                              :prune true :with-registry-auth false}))))
+
+(deftest render-test
+  (testing "render prints the rendered stack to stdout"
+    (let [out (with-out-str (is (= ::cli/done (cli/render {:stack-file nginx :verbosity 0}))))]
+      (is (re-find #"(?m)^services:" out))
+      (is (re-find #"name: nginx_cfg-[0-9a-f]{6}" out))))
+  (testing "--output writes a file"
+    (let [f (str (fs/create-temp-file {:suffix ".yml"}))]
+      (cli/render {:stack-file nginx :verbosity 0 :output f})
+      (is (re-find #"(?m)^services:" (slurp f)))
+      (fs/delete f))))
+
+(deftest compose-file-ignored-test
+  (is (nil? (get-in (cli/deploy-context {:stack-file nginx :set ["docker.compose-file=/tmp/x.yml"]})
+                    [:docker :compose-file]))))

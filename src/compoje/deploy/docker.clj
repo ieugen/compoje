@@ -5,9 +5,10 @@
             [taoensso.timbre :as log]))
 
 (defn deploy-args
-  "Arguments for `docker stack deploy`, as a vector (no shell quoting needed)."
+  "Arguments for `docker stack deploy`, as a vector (no shell quoting needed).
+   The stack is read from stdin (--compose-file -), so it is never written to disk."
   [docker]
-  (let [{:keys [stack context resolve-image compose-file with-registry-auth prune]} docker]
+  (let [{:keys [stack context resolve-image with-registry-auth prune]} docker]
     (log/trace "deploy-args" docker)
     (cond-> ["docker"]
       context (into ["--context" (str context)])
@@ -15,7 +16,7 @@
       with-registry-auth (conj "--with-registry-auth")
       resolve-image (into ["--resolve-image" (str resolve-image)])
       prune (conj "--prune")
-      true (into ["--compose-file" (str compose-file) (str stack)]))))
+      true (into ["--compose-file" "-" (str stack)]))))
 
 (defn deploy-str
   "The deploy command as a string, for logging and dry runs."
@@ -23,12 +24,14 @@
   (str/join " " (deploy-args docker)))
 
 (defn deploy
-  "Run docker stack deploy. Exits the process if docker fails."
-  [docker]
+  "Run docker stack deploy with the rendered `stack` on stdin, in directory
+   `dir` (the template dir, so relative file: paths resolve).
+   Exits the process if docker fails."
+  [docker stack dir]
   (let [args (deploy-args docker)]
     (log/info "Deploy using:" (str/join " " args))
     (try
-      (apply shell {:err :string} args)
+      (apply shell {:in stack :dir (str dir) :err :string} args)
       (catch Exception e
         (let [{:keys [err cmd type]} (ex-data e)]
           (when (= type :babashka.process/error)
@@ -39,9 +42,4 @@
 (comment
 
   (deploy-str {:context "dre-main"
-               :stack "bbb"
-               :compose-file "data/stack/nginx/stack.generated.yml"})
-
-  (deploy {:context "dre-main"
-           :stack "bbb"
-           :compose-file "data/stack/nginx/stack.generated.yml"}))
+               :stack "bbb"}))

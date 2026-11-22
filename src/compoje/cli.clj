@@ -28,9 +28,11 @@
     :trace))
 
 (defn- set-hooman-logging!
-  "Make log format friendly to hoomans."
+  "Make log format friendly to hoomans. Logs go to stderr, so stdout carries
+   only data (the rendered stack), e.g. for `compoje render x.yml > out.yml`."
   [verbosity]
   (log/merge-config! {:output-fn clog/output-fn
+                      :appenders {:println (log/println-appender {:stream :std-err})}
                       :min-level (verbosity->log-level verbosity)}))
 
 (defn register-default-providers!
@@ -73,12 +75,13 @@
          config (merge-with merge
                             {:docker docker-defaults}
                             config
-                            {:docker cli-docker})
-         compose-file (or (get-in config [:docker :compose-file])
-                          (fs/path template-dir "stack.generated.yml"))]
-     (context/config->context config {:config-file config-file
-                                      :template-dir template-dir
-                                      :docker {:compose-file compose-file}}))))
+                            {:docker cli-docker})]
+     (when (get-in config [:docker :compose-file])
+       (log/warn "x-compoje docker.compose-file is ignored: compoje no longer writes the stack to disk."
+                 "Use `compoje render -o FILE` to save it."))
+     (context/config->context (update config :docker dissoc :compose-file)
+                              {:config-file config-file
+                               :template-dir template-dir}))))
 
 (defn deploy-context
   "Build the final context for a deploy: stack file config, CLI options
@@ -88,46 +91,77 @@
         provider-results (providers/provide-secrets ctx)]
     (context/final-context ctx provider-results)))
 
+(defn- render-stack
+  "Build the context (providers included) and render the stack template.
+   Returns [context rendered-stack]."
+  [{:keys [verbosity] :as opts}]
+  (set-hooman-logging! verbosity)
+  (register-default-providers!)
+  (log/debug "Providers are" (providers/registered-providers))
+  (let [context (deploy-context opts)
+        template-file (str (fs/file (:template-dir context) "stack.tpl.yml"))]
+    (log/trace "Context" context)
+    [context (render/render template-file context {})]))
+
+(defn- printable-context [context show-secrets]
+  (u/pprint-str (cond-> context (not show-secrets) context/redact-secrets)))
+
+(def ^:private shared-flags
+  ["--stack STACK" "Stack name. Overrides x-compoje docker.stack."
+   "-s, --set <override>" {:doc "Override a config value: --set path.in.config=value. Repeatable."
+                           :coll? true}])
+
 (defn deploy
   "Deploy a stack template to a Docker Swarm cluster.
 
   Reads the x-compoje config from the stack file, applies --set overrides and
-  docker flags, fetches secrets from providers, renders the template to
-  stack.generated.yml and runs docker stack deploy."
-  {:flags ["--stack STACK" "Stack name. Overrides x-compoje docker.stack."
-           "--context CONTEXT" "Docker context to deploy to (docker --context)."
-           "--prune" {:doc "Prune services that are no longer referenced."
-                      :value true}
-           "--resolve-image STRATEGY" "Query the registry to resolve image digest and supported platforms: always, changed, never. Default: always."
-           "--[no-]with-registry-auth" "Send registry authentication details to Swarm agents. Default: on."
-           "--dry-run" {:doc "Render the stack and print it. Do not deploy."
-                        :value true}
-           "-s, --set <override>" {:doc "Override a config value: --set path.in.config=value. Repeatable."
-                                   :coll? true}]}
-  [{:keys [dry-run verbosity deploy-driver] :as opts}]
-  (set-hooman-logging! verbosity)
-  (register-default-providers!)
-  (log/debug "Providers are" (providers/registered-providers))
+  docker flags, fetches secrets from providers, renders the template and runs
+  docker stack deploy with the stack on stdin. The rendered stack is not
+  written to disk; use `compoje render -o FILE` for that."
+  {:flags (into shared-flags
+                ["--context CONTEXT" "Docker context to deploy to (docker --context)."
+                 "--prune" {:doc "Prune services that are no longer referenced."
+                            :value true}
+                 "--resolve-image STRATEGY" "Query the registry to resolve image digest and supported platforms: always, changed, never. Default: always."
+                 "--[no-]with-registry-auth" "Send registry authentication details to Swarm agents. Default: on."
+                 "--dry-run" {:doc "Print the docker command, the context (secrets redacted) and the rendered stack (stdout). Do not deploy."
+                              :value true}
+                 "--show-secrets" {:doc "With --dry-run: show provider results in the printed context."
+                                   :value true}])}
+  [{:keys [dry-run show-secrets deploy-driver] :as opts}]
   (when-not (= :docker deploy-driver)
     (throw (ex-info (str "Unsupported deploy driver: " (name deploy-driver)
                          ". Supported: docker.")
                     {:deploy-driver deploy-driver})))
-  (let [context (deploy-context opts)
-        {:keys [template-dir docker]} context
-        template-file (str (fs/file template-dir "stack.tpl.yml"))
-        contents (render/render template-file context {})]
-    (log/debug "Deploy context" context)
+  (let [[context contents] (render-stack opts)
+        {:keys [template-dir docker]} context]
     (when (str/blank? (some-> (:stack docker) str))
       (throw (ex-info "No stack name. Set x-compoje docker.stack in the stack file, or pass --stack."
                       {:stack-file (:stack-file opts)})))
     (if dry-run
       (do
         (log/info (docker/deploy-str docker))
-        (log/info (u/pprint-str context) "\n\n")
-        (log/info contents))
-      (do
-        (spit (str (:compose-file docker)) contents)
-        (docker/deploy docker))))
+        (log/info (printable-context context show-secrets))
+        (print contents)
+        (flush))
+      (docker/deploy docker contents template-dir)))
+  ::done)
+
+(defn render
+  "Render a stack template and print it.
+
+  Runs the secret providers and renders the template like deploy, then writes
+  the result to stdout (logs go to stderr), or to a file with --output. The
+  output can contain secret values: don't commit it."
+  {:flags (into shared-flags
+                ["-o, --output FILE" "Write the rendered stack to FILE instead of stdout (- means stdout)."])}
+  [{:keys [output] :as opts}]
+  (let [[_context contents] (render-stack opts)]
+    (if (or (nil? output) (= "-" output))
+      (do (print contents)
+          (flush))
+      (do (spit output contents)
+          (log/warn "Wrote" output "- it can contain secret values; don't commit it."))))
   ::done)
 
 (defn migrate
@@ -166,6 +200,7 @@
                                      :parse keyword}
            "--version" "Print the compoje version and exit."]
    :commands ["deploy <stack-file>" #'deploy
+              "render <stack-file>" #'render
               "migrate <dir>" #'migrate]})
 
 (defn- help-requested? [args]

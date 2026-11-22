@@ -81,8 +81,10 @@ An empty or missing password is an error.
 ### Security notes
 
 - `local-path` files contain decrypted secrets. They are written on every run, including `--dry-run`.
-  Keep them out of version control (the example's `.gitignore` excludes `generated/` and `stack.generated.yml`).
-- Values used in the template end up decrypted in `stack.generated.yml`, and `--dry-run` prints them.
+  Keep them out of version control (the example's `.gitignore` excludes `generated/`).
+- Values used in the template end up decrypted in the rendered stack. compoje passes it to docker on stdin and
+  doesn't write it to disk, but `render` and `deploy --dry-run` print it. In the context printed by `--dry-run`,
+  provider results are redacted unless you pass `--show-secrets`.
 - Never commit a real vault password. `example-stacks/ansible-vault/vault-password.txt` is a demo password.
 
 ## The library

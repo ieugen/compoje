@@ -29,7 +29,7 @@ Integration tests need a running Docker daemon (testcontainers): test/integratio
 - utils.clj: `deep-merge`, `set-args->map`, misc.
 - compose-spec/: compose JSON schema. example-stacks/: sample stacks.
 
-Deploy flow: `deploy-context` (`cli-config->context` → `providers/provide-secrets` → `context/final-context`) → `render/render <template-dir>/stack.tpl.yml` → write `stack.generated.yml` next to the template → `docker/deploy`.
+Deploy flow: `deploy-context` (`cli-config->context` → `providers/provide-secrets` → `context/final-context`) → `render/render <template-dir>/stack.tpl.yml` → `docker/deploy` pipes it to `docker stack deploy --compose-file -` (run in the template dir); the rendered stack is never written to disk (`compoje render [-o FILE]` prints/saves it). Logs go to stderr, data to stdout.
 
 ## Template syntax (important)
 Selmer is called with `{:tag-open \< :tag-close \>}`, so the delimiters are NOT `{{ }}` / `{% %}`:

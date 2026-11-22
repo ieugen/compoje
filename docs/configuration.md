@@ -36,7 +36,7 @@ Things to know:
   read. The section is rendered with the rest of the file, but that only affects the output.
 - **YAML 1.2.** `yes`, `no`, `on` and `off` are strings, not booleans. Quote values that should stay strings,
   such as `'0.50'`.
-- **It stays in the output.** The rendered `stack.generated.yml` still contains `x-compoje:`. Docker ignores
+- **It stays in the output.** The rendered stack still contains `x-compoje:`. Docker ignores
   top-level keys that start with `x-` ([extension fields](https://docs.docker.com/reference/compose-file/extension/)).
 - **Legacy key.** A top-level `compoje:` key is still read, with a warning, but `docker stack deploy` rejects it.
   Rename it to `x-compoje:`. Old `compoje.edn` files are no longer read; convert them with
@@ -55,7 +55,6 @@ Options for `docker stack deploy`.
 | `prune` | `false` | Remove services no longer in the stack. | `--prune` |
 | `resolve-image` | `always` | `always`, `changed` or `never`. | `--resolve-image` |
 | `with-registry-auth` | `true` | Send registry credentials to the swarm agents. | `--[no-]with-registry-auth` |
-| `compose-file` | `stack.generated.yml` next to the stack file | Where to write the rendered stack. A relative path is resolved against the current directory. | none |
 
 ### `providers`
 
@@ -120,7 +119,7 @@ The template is rendered with a context map. It contains:
 
 | Key | Content |
 |---|---|
-| `docker` | The merged docker options, plus `compose-file` (the absolute output path). |
+| `docker` | The merged docker options. |
 | `providers` | The provider list from the config. |
 | `secrets` | The secret declarations from the config (not their values). |
 | `values` | Your values, after `--set`. |

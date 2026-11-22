@@ -6,7 +6,7 @@ compoje runs as a Babashka task, usually named `compoje` in your `bb.edn` (see [
 bb compoje [global flags] <command> [command flags] <argument>
 ```
 
-Commands: [`deploy`](#deploy) and [`migrate`](#migrate).
+Commands: [`deploy`](#deploy), [`render`](#render) and [`migrate`](#migrate).
 
 `bb compoje --help` and `bb compoje <command> --help` print the built-in help.
 
@@ -32,8 +32,8 @@ Deploys a stack file (a compose file with an `x-compoje:` section, see [configur
 1. Reads the `x-compoje:` section of `<stack-file>`, applies `--set` overrides and the docker flags below.
 2. Runs the secret providers for every declared secret ([providers.md](providers.md)).
 3. Renders the template with the result ([templates.md](templates.md)).
-4. Writes the rendered stack to `stack.generated.yml` next to the stack file (or to `docker.compose-file`).
-5. Runs `docker stack deploy`.
+4. Runs `docker stack deploy` with the rendered stack on stdin, from the stack file's directory (so relative
+   `file:` paths work). The rendered stack is not written to disk; use [`render`](#render) to see or save it.
 
 | Flag | Meaning |
 |---|---|
@@ -42,13 +42,14 @@ Deploys a stack file (a compose file with an `x-compoje:` section, see [configur
 | `--prune` | Remove services that are no longer in the stack. |
 | `--resolve-image STRATEGY` | `always` (default), `changed` or `never`. Passed to `docker stack deploy`. |
 | `--[no-]with-registry-auth` | Send registry credentials to the swarm agents. On by default. |
-| `--dry-run` | Render and print the docker command, the context and the stack. Deploys nothing and writes no stack file. |
+| `--dry-run` | Print the docker command and the context (on stderr, provider results shown as `<redacted>`), and the rendered stack (on stdout). Deploys nothing. |
+| `--show-secrets` | With `--dry-run`: show the provider results in the printed context. |
 | `-s`, `--set PATH=VALUE` | Override a config value, e.g. `--set values.replicas=2`. Repeatable. See [configuration.md](configuration.md#overriding-values-with---set). |
 
 The docker command it runs looks like this:
 
 ```text
-docker [--context CTX] stack deploy [--with-registry-auth] --resolve-image always [--prune] --compose-file /abs/path/stack.generated.yml STACK
+docker [--context CTX] stack deploy [--with-registry-auth] --resolve-image always [--prune] --compose-file - STACK
 ```
 
 Notes:
@@ -57,7 +58,8 @@ Notes:
   ([known issue](known-issues.md#deploy-always-renders-stacktplyml)). Keep the name `stack.tpl.yml`.
 - `--dry-run` still runs the providers, and providers with `local-path` still write their files
   ([known issue](known-issues.md#provider-local-path-files-are-written-on---dry-run)).
-- `--dry-run` prints the full context, which includes decrypted secrets.
+- The rendered stack (stdout of `--dry-run`) contains every value the template uses, secrets included.
+- Logs go to stderr and data to stdout, so `bb compoje deploy --dry-run x.yml > out.yml` saves just the stack.
 
 Examples:
 
@@ -67,6 +69,30 @@ bb compoje deploy --context prod --prune stacks/web/stack.tpl.yml
 bb compoje deploy --stack web-test --set values.replicas=1 stacks/web/stack.tpl.yml
 bb compoje -v deploy --dry-run stacks/web/stack.tpl.yml
 ```
+
+## render
+
+```bash
+bb compoje render [flags] <stack-file>
+```
+
+Runs the secret providers and renders the stack like `deploy` does, then prints it to stdout. Logs go to stderr.
+Use it to debug a template, or to pipe the stack to another tool:
+
+```bash
+bb compoje render stacks/web/stack.tpl.yml | less
+bb compoje render stacks/web/stack.tpl.yml | (cd stacks/web && docker stack config -c -)
+bb compoje render -o /tmp/web.yml stacks/web/stack.tpl.yml
+```
+
+| Flag | Meaning |
+|---|---|
+| `-o`, `--output FILE` | Write the stack to `FILE` instead of stdout (`-` means stdout). |
+| `--stack NAME` | Stack name, as for `deploy`. |
+| `-s`, `--set PATH=VALUE` | Override a config value, as for `deploy`. |
+
+The output contains the values the template uses, secrets included. Don't commit it, and remove files written
+with `--output` when you are done.
 
 ## migrate
 

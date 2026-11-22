@@ -113,7 +113,7 @@ service templates (like `hostname: "{{.Node.Hostname}}"`), which you can still u
 
 ```console
 $ bb compoje deploy --dry-run hello/stack.tpl.yml
-docker stack deploy --with-registry-auth --resolve-image always --compose-file /.../hello/stack.generated.yml hello
+docker stack deploy --with-registry-auth --resolve-image always --compose-file - hello
 ...
 services:
   web:
@@ -129,19 +129,20 @@ configs:
     name: index-ff6e66
 ```
 
-Between the command and the rendered stack it also prints the context, i.e. all the values available to the template.
+Between the command and the rendered stack it also prints the context, i.e. all the values available to the template
+(secret values show as `<redacted>`). `bb compoje render hello/stack.tpl.yml` prints just the rendered stack.
 
 ## Deploy
 
 ```console
 $ bb compoje deploy hello/stack.tpl.yml
-Deploy using: docker stack deploy --with-registry-auth --resolve-image always --compose-file /.../hello/stack.generated.yml hello
+Deploy using: docker stack deploy --with-registry-auth --resolve-image always --compose-file - hello
 Creating network hello_default
 Creating config index-ff6e66
 Creating service hello_web
 ```
 
-compoje writes the rendered stack to `hello/stack.generated.yml` and deploys it. Check it:
+compoje passes the rendered stack to docker on stdin; nothing is written to disk. Check it:
 
 ```console
 $ docker stack services hello

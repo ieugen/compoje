@@ -22,15 +22,30 @@
 (defn final-context
   "Deep merge contexts, overwriting values."
   ([file-ctx cli-ctx & other]
-   (log/debug "Merge" file-ctx cli-ctx)
-   (let [template-dir (:template-dir file-ctx)
-         file (or (get-in file-ctx [:docker :compose-file])
-                  (fs/path template-dir "stack.generated.yml"))
-         file (str (fs/normalize (fs/absolutize file)))
-         ctx (u/deep-merge file-ctx cli-ctx {:docker {:compose-file file}})
-         ctx (apply u/deep-merge ctx other)]
-       ;; TODO: some context validations
-     ctx)))
+   (log/trace "Merge" file-ctx cli-ctx)
+   ;; TODO: some context validations
+   (apply u/deep-merge file-ctx cli-ctx other)))
+
+(def redacted "<redacted>")
+
+(defn redact-secrets
+  "The context with every provider result (top-level keys named after the
+   declared secrets) replaced by \"<redacted>\". For printing."
+  [ctx]
+  (reduce (fn [c n]
+            (let [k (keyword (str n))]
+              (cond-> c (contains? c k) (assoc k redacted))))
+          ctx
+          (keep :name (:secrets ctx))))
+
+^:rct/test
+(comment
+  (redact-secrets {:secrets [{:name "app"} {:name "missing"}]
+                   :app {:password "p"}
+                   :values {:a 1}})
+  ;=> {:secrets [{:name "app"} {:name "missing"}] :app "<redacted>" :values {:a 1}}
+  (redact-secrets {:values {:a 1}}) ;=> {:values {:a 1}}
+  )
 
 (defn load-context!
   "Builds context as a map of values and returns it.
