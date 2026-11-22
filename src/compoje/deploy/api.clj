@@ -9,6 +9,7 @@
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
             [clojure.string :as str]
+            [compoje.deploy.interpolate :as interpolate]
             [compoje.deploy.registry-auth :as registry-auth]
             [compoje.deploy.swarm-convert :as convert]
             [compoje.docker.client :as client]
@@ -200,10 +201,15 @@
   (let [{:keys [stack prune resolve-image with-registry-auth]} docker
         ;; compoje's in-memory objects (x-compoje from/template), by definition key
         managed (fn [kind] (into {} (for [o objects :when (= kind (:kind o))] [(:key o) o])))
+        getenv (or getenv #(System/getenv %))
+        ;; ${VAR} substitution from the environment, like docker stack deploy
+        stack-data (interpolate/interpolate
+                    stack-data getenv
+                    #(log/warn (str "The \"" % "\" variable is not set. Defaulting to a blank string.")))
         plan (convert/convert stack-data {:stack stack
                                           :template-dir template-dir
                                           :read-file #(slurp (str (fs/path template-dir %)))
-                                          :getenv (or getenv #(System/getenv %))})]
+                                          :getenv getenv})]
     (doseq [p (:ignored plan)]
       (log/warn "Ignoring unsupported option (as docker stack does):" (str/join "." p)))
     (client/with-connection [conn endpoint]

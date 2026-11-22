@@ -91,7 +91,12 @@
         no-ids (fn no-ids [x]
                  (cond
                    (map? x) (into {} (for [[k v] x :when (not (#{"SecretID" "ConfigID"} k))]
-                                       [k (if (= "Target" k) (get net-name v v) (no-ids v))]))
+                                       [k (cond
+                                            (= "Target" k) (get net-name v v)
+                                            ;; docker/cli collects secret/config references in a
+                                            ;; Go map: their order is random, so compare sorted
+                                            (#{"Secrets" "Configs"} k) (vec (sort-by #(get-in % ["File" "Name"]) (no-ids v)))
+                                            :else (no-ids v))]))
                    (sequential? x) (mapv no-ids x)
                    :else x))]
     {:services (into {} (for [s (get-all "/services")] [(get-in s ["Spec" "Name"]) (no-ids (get s "Spec"))]))

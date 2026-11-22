@@ -285,6 +285,8 @@
         "ContainerSpec" : {
           "Image" : "nginx:stable",
           "Labels" : {
+            "com.example.version" : "${REF_VERSION:-1.0}",
+            "com.example.price" : "$$5",
             "com.docker.stack.namespace" : "ref"
           },
           "Privileges" : {

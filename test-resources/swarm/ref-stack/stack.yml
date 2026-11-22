@@ -124,6 +124,10 @@ services:
     environment:
       - X=1
       - Y=two words
+    labels:
+      # substituted from the environment by both engines
+      com.example.version: "${REF_VERSION:-1.0}"
+      com.example.price: "$$5"
     healthcheck:
       disable: true
     deploy:
