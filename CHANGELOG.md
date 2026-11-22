@@ -5,7 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-
+### Added
+- Shell completion: `compoje completion bash|zsh` prints a script that completes commands, flags, flag values (engines, `--resolve-image`, docker contexts, `--set` paths) and stack files/directories, for `compoje ...` and `bb compoje ...` (other `bb` words still use bb's completion). The one-line installer installs it for bash (`--no-completion` to skip). See docs/install.md, "Shell completion".
 
 ## [0.3.0] - 2026-11-23
 

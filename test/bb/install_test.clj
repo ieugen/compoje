@@ -3,6 +3,7 @@
    uses babashka.http-client, which the JVM test classpath doesn't have."
   (:require [babashka.fs :as fs]
             [babashka.process]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]))
 
 (System/setProperty "compoje.install.no-run" "true")
@@ -46,7 +47,8 @@
 (deftest install-and-uninstall-local-jar
   (let [tmp (fs/create-temp-dir)
         jar (fs/path tmp "compoje.jar")
-        opts {:from (str jar) :dir (str (fs/path tmp "bin")) :jar-dir (str (fs/path tmp "share"))}]
+        opts {:from (str jar) :dir (str (fs/path tmp "bin")) :jar-dir (str (fs/path tmp "share"))
+              :completion-dir (str (fs/path tmp "completions"))}]
     (try
       ;; a stand-in jar: a tiny bb uberjar whose main prints like compoje --version
       (fs/create-dirs (fs/path tmp "src"))
@@ -54,7 +56,9 @@
       (spit (str (fs/path tmp "bb.edn")) "{:paths [\"src\"]}")
       (babashka.process/shell {:dir (str tmp) :out :string :err :string} "bb" "uberjar" "compoje.jar" "-m" "fake")
       (spit (str jar ".sha256") (str (i/sha256-hex (fs/read-all-bytes jar)) "  compoje.jar\n"))
-      (with-out-str (i/install! opts))
+      (testing "a jar without the completion command: a note, no completion file, no failure"
+        (is (str/includes? (with-out-str (i/install! opts)) "no shell completion installed"))
+        (is (not (fs/exists? (fs/path tmp "completions" "compoje")))))
       (is (= "compoje test\n" (:out (babashka.process/shell {:out :string :in ""} (str (fs/path tmp "bin" "compoje")) "--version"))))
       (with-out-str (i/uninstall! opts))
       (is (not (fs/exists? (fs/path tmp "bin" "compoje"))))

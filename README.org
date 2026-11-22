@@ -54,7 +54,7 @@ Other ways to install it, all described in [[file:docs/install.md][docs/install.
 
 #+BEGIN_SRC clojure
 ;; bb.edn
-{:deps {io.github.ieugen/compoje {:git/tag "v0.2.0" :git/sha "abc1234"}}
+{:deps {io.github.ieugen/compoje {:git/tag "v0.3.0" :git/sha "aae4828e129c9451f3c0fa7317205bbe5cff625e"}}
  :tasks {:requires ([compoje.cli :as cli])
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}
@@ -66,6 +66,9 @@ bb compoje --help
 
 # Create a new stack directory with a working example
 bb compoje init my-stack
+
+# Shell completion (see docs/install.md)
+compoje completion bash > ~/.local/share/bash-completion/completions/compoje
 
 # Render and show the stack and the docker command, without deploying
 bb compoje deploy --dry-run example-stacks/nginx/stack.tpl.yml

@@ -5,6 +5,7 @@
    [clojure.test :as t]
    [unit.ansible-vault.core-test]
    [unit.ansible-vault.yamlstar-test]
+   [unit.compoje.completion-test]
    [unit.compoje.deploy.api-test]
    [unit.compoje.deploy.swarm-convert-test]
    [unit.compoje.docker.client-test]
@@ -23,6 +24,7 @@
    'bb.install-test
    'unit.ansible-vault.core-test
    'unit.ansible-vault.yamlstar-test
+   'unit.compoje.completion-test
    'unit.compoje.deploy.api-test
    'unit.compoje.deploy.swarm-convert-test
    'unit.compoje.docker.client-test

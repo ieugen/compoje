@@ -28,6 +28,8 @@ Options:
   --dir DIR       where to put the `compoje` command (default: ~/.local/bin; env COMPOJE_INSTALL_DIR)
   --jar-dir DIR   where to keep the jar (default: ~/.local/share/compoje)
   --from PATH|URL install this jar instead of a release download (checked against PATH.sha256 if present)
+  --completion-dir DIR  where to put the bash completion (default: ~/.local/share/bash-completion/completions)
+  --no-completion install no shell completion
   --force         replace a `compoje` command that this installer did not write
   --uninstall     remove the command and the jars
   --help          show this help")
@@ -40,9 +42,9 @@ Options:
                :dir (not-empty (get env "COMPOJE_INSTALL_DIR"))}]
     (cond
       (nil? a) opts
-      (#{"--force" "--uninstall" "--help" "-h"} a)
+      (#{"--force" "--uninstall" "--no-completion" "--help" "-h"} a)
       (recur more (assoc opts (keyword (str/replace a #"^-+" "")) true))
-      (#{"--version" "--dir" "--jar-dir" "--from"} a)
+      (#{"--version" "--dir" "--jar-dir" "--from" "--completion-dir"} a)
       (if (and (seq more) (not (str/starts-with? (first more) "--")))
         (recur (rest more) (assoc opts (keyword (subs a 2)) (first more)))
         (throw (ex-info (str a " needs a value") {})))
@@ -102,10 +104,27 @@ Options:
       :else (println "Note: no" sha-src "- jar not checked."))
     {:bytes jar :label label}))
 
-(defn- dirs [{:keys [dir jar-dir]}]
-  (let [home (System/getProperty "user.home")]
+(defn- dirs [{:keys [dir jar-dir completion-dir]}]
+  (let [home (System/getProperty "user.home")
+        data (or (not-empty (System/getenv "XDG_DATA_HOME")) (str (fs/path home ".local" "share")))]
     {:bin (str (or dir (fs/path home ".local" "bin")))
-     :jars (str (or jar-dir (fs/path home ".local" "share" "compoje")))}))
+     :jars (str (or jar-dir (fs/path home ".local" "share" "compoje")))
+     ;; bash-completion loads <dir>/compoje on the first `compoje <Tab>`
+     :completions (str (or completion-dir (fs/path data "bash-completion" "completions")))}))
+
+(def completion-marker "# compoje shell completion")
+
+(defn- install-completion!
+  "Write the bash completion for the installed command. Best effort: a jar
+   without the `completion` command only gets a note."
+  [cmd completions]
+  (let [{:keys [out exit]} (p/shell {:out :string :err :string :in "" :continue true} (str cmd) "completion" "bash")
+        f (fs/path completions "compoje")]
+    (if (and (zero? exit) (str/starts-with? out completion-marker))
+      (do (fs/create-dirs completions)
+          (spit (str f) out)
+          (println "Bash completion ->" (str f) "(open a new shell)"))
+      (println "Note: no shell completion installed (this compoje has no `completion` command)."))))
 
 (defn- ours? [f] (and (fs/exists? f) (str/includes? (slurp (str f)) marker)))
 
@@ -118,12 +137,16 @@ Options:
         (println "Left" (str cmd) "alone: not written by this installer.")))
     (when (fs/exists? jars)
       (fs/delete-tree jars)
-      (println "Removed" jars))))
+      (println "Removed" jars))
+    (let [f (fs/path (:completions (dirs opts)) "compoje")]
+      (when (and (fs/exists? f) (str/starts-with? (slurp (str f)) completion-marker))
+        (fs/delete f)
+        (println "Removed" (str f))))))
 
 (defn install! [opts]
   (when-not (fs/which "bb")
     (throw (ex-info "bb (Babashka) is not on PATH; the compoje command needs it. See https://babashka.org" {})))
-  (let [{:keys [bin jars]} (dirs opts)
+  (let [{:keys [bin jars completions]} (dirs opts)
         cmd (fs/path bin "compoje")
         _ (when (and (fs/exists? cmd) (not (ours? cmd)) (not (:force opts)))
             (throw (ex-info (str cmd " exists and was not written by this installer (bbin?)."
@@ -145,6 +168,8 @@ Options:
       (when-not (and (zero? exit) (str/starts-with? (str/trim out) "compoje"))
         (throw (ex-info (str "The installed command does not work (" (str/trim (str err out)) "). Is " jar " a compoje jar?") {})))
       (println "Installed" (str/trim out) "->" (str cmd)))
+    (when-not (:no-completion opts)
+      (install-completion! cmd completions))
     (when-not (on-path? bin (System/getenv "PATH"))
       (println (str "Add " bin " to your PATH, e.g.: echo 'export PATH=\"" bin ":$PATH\"' >> ~/.bashrc")))))
 

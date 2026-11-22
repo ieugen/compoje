@@ -4,6 +4,7 @@
             [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [compoje.completion :as completion]
             [compoje.config :as config]
             [compoje.context :as context]
             [compoje.deploy.api :as api]
@@ -312,6 +313,23 @@
                  "\n      (or bb compoje ... when compoje runs as a bb task)"))
   ::done)
 
+(declare cmdspec)
+
+(defn completion
+  "Print a shell completion script: bash or zsh.
+
+  The script completes commands, flags, flag values and stack files, for
+  `compoje ...` and `bb compoje ...`. Install it once; see docs/install.md:
+    compoje completion bash > ~/.local/share/bash-completion/completions/compoje"
+  [{:keys [shell]}]
+  (let [m (completion/model cmdspec)]
+    (print (case shell
+             "bash" (completion/bash-script m)
+             "zsh" (completion/zsh-script m)
+             (throw (ex-info (str "Unknown shell: " shell ". Supported: bash, zsh.") {:shell shell}))))
+    (flush))
+  ::done)
+
 (defn version
   "compoje version, from resources/compoje/VERSION (\"unknown\" if missing)."
   []
@@ -331,7 +349,8 @@
    :commands ["deploy <stack-file>" #'deploy
               "render <stack-file>" #'render
               "migrate <dir>" #'migrate
-              "init <dir>" #'init]})
+              "init <dir>" #'init
+              "completion <shell>" #'completion]})
 
 (defn- help-requested? [args]
   (some #{"-h" "--help" "help"} args))

@@ -6,7 +6,8 @@ compoje runs as a Babashka task, usually named `compoje` in your `bb.edn` (see [
 bb compoje [global flags] <command> [command flags] <argument>
 ```
 
-Commands: [`init`](#init), [`deploy`](#deploy), [`render`](#render) and [`migrate`](#migrate).
+Commands: [`init`](#init), [`deploy`](#deploy), [`render`](#render), [`migrate`](#migrate) and
+[`completion`](#completion).
 
 `bb compoje --help` and `bb compoje <command> --help` print the built-in help.
 
@@ -138,6 +139,14 @@ Upgrades a stack directory to the current format. Two steps, each when it applie
 | `--dry-run` | Print the migrated `stack.tpl.yml` (stdout) and the report (stderr). Do not write it. |
 
 Details in [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md).
+
+## completion
+
+```bash
+bb compoje completion bash|zsh
+```
+
+Prints a shell completion script to stdout. Install it once, see [install.md](install.md#shell-completion).
 
 ## Exit codes and errors
 

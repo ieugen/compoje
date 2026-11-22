@@ -38,6 +38,8 @@ bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/mai
 | `--jar-dir DIR` | Where the jar is kept (default `~/.local/share/compoje`). |
 | `--from PATH\|URL` | Install this jar instead of downloading a release (checked against `<PATH>.sha256` if it exists). |
 | `--force` | Replace a `compoje` command the installer didn't write (e.g. one from bbin). |
+| `--completion-dir DIR` | Where to put the bash completion (default `~/.local/share/bash-completion/completions`). See [Shell completion](#shell-completion). |
+| `--no-completion` | Install no shell completion. |
 | `--uninstall` | Remove the command and the jars. |
 
 **Update:** run the same line again; it replaces the jar and the launcher. **Pin:** add `--version`. The installer
@@ -148,6 +150,39 @@ A CI job then needs only bb and the docker CLI:
 curl -fsSL -o compoje.jar https://github.com/ieugen/compoje/releases/download/v0.2.0/compoje.jar
 bb compoje.jar deploy --context prod stacks/web/stack.tpl.yml
 ```
+
+## Shell completion
+
+compoje completes commands, flags, flag values (`--resolve-image`, `--deploy-driver`, `--context` from your docker
+contexts, config paths for `--set`) and arguments (stack files, directories), for both `compoje ...` and
+`bb compoje ...`. The script is generated from compoje's command definitions; Tab doesn't start compoje.
+
+**bash, `compoje` command** (the [quick install](#quick-install-one-line) does this for you): with the
+bash-completion package (installed on most Linux distributions), put the script where it is loaded on demand:
+
+```bash
+compoje completion bash > ~/.local/share/bash-completion/completions/compoje
+```
+
+**bash, also `bb compoje ...`** (per-project bb task): completing `bb` words needs the script loaded when the shell
+starts, so write it once and source it from `~/.bashrc`. Other `bb` words (task names) still go to bb's own
+completion.
+
+```bash
+mkdir -p ~/.local/share/compoje
+bb compoje completion bash > ~/.local/share/compoje/completion.bash      # or: compoje completion bash
+echo 'source ~/.local/share/compoje/completion.bash' >> ~/.bashrc
+```
+
+**zsh**: the same script through zsh's bash compatibility (`bashcompinit`):
+
+```bash
+compoje completion zsh > ~/.zsh/compoje-completion.zsh
+echo 'source ~/.zsh/compoje-completion.zsh' >> ~/.zshrc    # after compinit
+```
+
+Regenerate the file after updating compoje, so new commands and flags complete. Without the bash-completion package
+the script still works, with simpler file completion.
 
 ## Which bb version
 
