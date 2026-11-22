@@ -130,7 +130,9 @@ Upgrades a stack directory to the current format. Two steps, each when it applie
 
 1. **`compoje.edn` → `x-compoje:`**: the contents of `compoje.edn` become an `x-compoje:` section at the top of
    `stack.tpl.yml`. `compoje.edn` is left in place. Stops when `compoje.edn` uses aero tags (`#env`, `#or`, ...).
-2. **Secrets written to files → secrets from memory**: definitions that read a provider's `local-path` file become
+2. **Secret references (0.3.0 stacks)**: `<{ app.x }>` / `from: app.x` become `secrets.app.x`, where provider
+   results live.
+3. **Secrets written to files → secrets from memory**: definitions that read a provider's `local-path` file become
    `x-compoje: {from: ...}`, so secrets are no longer written to disk. Secrets that can't be converted safely are
    left as they are and reported.
 

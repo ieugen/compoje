@@ -109,7 +109,6 @@ $ bb compoje deploy --dry-run stack.tpl.yml
 [FATAL] Invalid x-compoje configuration in stack.tpl.yml:
   docker.prune: should be a boolean
   docker.stak: unknown key; did you mean stack?
-  secrets[0].name: values would overwrite the context key of the same name; choose another name
   secrets[0].provider: unknown provider file (providers: files)
 ```
 
@@ -120,8 +119,7 @@ What is checked:
   ([providers.md](providers.md)); custom provider types may have any keys.
 - `secrets`: `name` and `provider` are required, and the provider must be declared. For built-in providers, the
   secret's settings are checked (e.g. `file` is required for the file and ansible-vault providers).
-- Names are unique, and a secret may not be named like a context key (`docker`, `providers`, `secrets`, `values`,
-  `template-dir`, `config-file`, `work-dir`): its result would replace that key in the template.
+- Provider and secret names are unique.
 - `--set` values are strings; where a boolean is expected, `true`/`false` are converted, so
   `--set docker.prune=false` really turns pruning off.
 
@@ -135,10 +133,10 @@ memory:
 secrets:
   db_password:
     x-compoje:
-      from: app.db_password        # a value from the context, e.g. a provider result
+      from: secrets.app.db_password        # a value from the context, e.g. a provider result
   tls_key:
     x-compoje:
-      from: tls.key                # multi-line values (keys, certificates) work as they are
+      from: secrets.tls.key                # multi-line values (keys, certificates) work as they are
 
 configs:
   app_conf:
@@ -181,6 +179,15 @@ Things to know:
 - A stack with such definitions is parsed after rendering and sent to docker as JSON. YAML 1.2 rules apply: write
   `true`/`false`, not `yes`/`no`.
 
+### Template variables
+
+Before rendering, `deploy` and `render` also check the variables used in `<{ }>` tags (in the stack file and in
+`x-compoje: {template: ...}` files), because an undefined variable renders as an empty string:
+
+- an undefined `secrets.<name>...` path, or a reference to a secret without `secrets.` (`<{ app.x }>`), is an
+  error: an empty secret is never what you want;
+- any other undefined variable is a warning. Add `|default:"..."` when an empty or default value is intended.
+
 ## Precedence
 
 Settings are merged from these sources. Later ones win:
@@ -213,10 +220,9 @@ The template is rendered with a context map. It contains:
 |---|---|
 | `docker` | The merged docker options. |
 | `providers` | The provider list from the config. |
-| `secrets` | The secret declarations from the config (not their values). |
+| `secrets` | The provider results, one key per declared secret: `secrets.<name>` (e.g. `<{ secrets.app.db_user }>`). See [providers.md](providers.md#using-secrets-in-the-template). |
 | `values` | Your values, after `--set`. |
 | other `x-compoje` keys | As written. |
-| `<secret name>` | One key per declared secret, holding what its provider returned. See [providers.md](providers.md#using-secrets-in-the-template). |
 | `template-dir` | The stack file's directory, as given on the command line (may be relative, e.g. `.`). |
 | `config-file` | The stack file. |
 | `work-dir` | The directory compoje was started from. |

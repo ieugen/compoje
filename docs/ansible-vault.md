@@ -38,8 +38,8 @@ x-compoje:
 services:
   app:
     environment:
-      DB_USER: <{ app.db_user }>
-      API_TOKEN: <{ tokens.api_token }>
+      DB_USER: <{ secrets.app.db_user }>
+      API_TOKEN: <{ secrets.tokens.api_token }>
     secrets:
       - source: db_password
         target: db_password
@@ -47,11 +47,11 @@ services:
 secrets:
   db_password:
     x-compoje:
-      from: app.db_password   # Docker secret created by compoje from memory
+      from: secrets.app.db_password   # Docker secret created by compoje from memory
 ```
 
 Each secret's decrypted content is available in the template under the secret's `name`
-(`<{ app.db_user }>` above). `x-compoje.from` turns a value into a Docker secret without writing it to disk; see
+(`<{ secrets.app.db_user }>` above). `x-compoje.from` turns a value into a Docker secret without writing it to disk; see
 [configuration.md](configuration.md#secrets-and-configs-from-memory).
 
 ### Provider options

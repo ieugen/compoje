@@ -7,7 +7,7 @@
      secrets:
        db_password:
          x-compoje:
-           from: app.db_password        # path in the render context
+           from: secrets.app.db_password   # path in the render context
      configs:
        nginx_conf:
          x-compoje:

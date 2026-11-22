@@ -41,7 +41,7 @@ Keys that every secret entry has:
 
 | Key | Meaning |
 |---|---|
-| `name` | Name of the result in the template context. Required. It may not be a context key (`docker`, `values`, `secrets`, ...); this is [checked](configuration.md#validation). |
+| `name` | Name of the result: the template reads it as `secrets.<name>`. Required, unique. |
 | `provider` | The `name` of a provider. Required. |
 | `local-path` | Legacy, optional. Also write the secret **in plain text** to this file, relative to the stack directory. Prefer [in-memory Docker secrets](#docker-secrets-without-files). |
 | `spit-key` | Optional, with `local-path`. Write only this key of the result, not all of it. |
@@ -50,12 +50,16 @@ The other keys depend on the provider.
 
 ### Using secrets in the template
 
-Refer to the result by the secret's name:
+Provider results are under `secrets`, by the secret's name, so a secret can never clash with another context key
+(`values`, `docker`, ...):
 
 ```yaml
 environment:
-  DB_USER: <{ app.db_user }>
+  DB_USER: <{ secrets.app.db_user|yaml-str }>
 ```
+
+A reference to a missing result (`<{ secrets.app.nope }>`) stops the deploy instead of rendering empty; see
+[configuration.md](configuration.md#template-variables).
 
 Values used this way end up in the rendered stack. compoje doesn't write the rendered stack to disk, but `render`
 and `deploy --dry-run` print it.
@@ -82,7 +86,7 @@ services:
 secrets:
   db_password:
     x-compoje:
-      from: app.db_password      # path in the context: secret "app", key "db_password"
+      from: secrets.app.db_password      # path in the context: secret "app", key "db_password"
 ```
 
 Configs work the same way, and can also be a template rendered in memory. See
@@ -114,7 +118,7 @@ Secret settings:
 | Key | Meaning |
 |---|---|
 | `file` | The encrypted file, relative to the stack directory. Required. |
-| `format` | `yaml` (default): parse the decrypted YAML into a map, so `<{ app.db_user }>` works. `raw`: the decrypted text as one string. |
+| `format` | `yaml` (default): parse the decrypted YAML into a map, so `<{ secrets.app.db_user }>` works. `raw`: the decrypted text as one string. |
 
 Full guide with examples: [ansible-vault.md](ansible-vault.md).
 
@@ -156,7 +160,7 @@ Secret settings:
 | `opts` | Optional read options passed to vault-clj's `read-secret`, e.g. `{version: 3}`. |
 | `format` | With `local-path` and no `spit-key`: write the whole secret as `edn` or `json`. |
 
-The result is the secret's key/value map: `<{ nginx.username }>`, or `from: nginx.username` for a Docker secret.
+The result is the secret's key/value map: `<{ secrets.nginx.username }>`, or `from: secrets.nginx.username` for a Docker secret.
 Keys that contain dots, like `cert.key`, can't be used in a path; name your Vault keys without dots (`cert_key`).
 
 If a secret can't be read, the deploy stops with an error naming the secret and Vault's message, e.g.
@@ -174,10 +178,10 @@ x-compoje:
     - name: files
       type: compoje.providers.file/file
   secrets:
-    - name: common                    # <{ common.db.host }>
+    - name: common                    # <{ secrets.common.db.host }>
       provider: files
       file: shared/common.yml
-    - name: api-token                 # a raw string: x-compoje {from: api-token}
+    - name: api-token                 # a raw string: x-compoje {from: secrets.api-token}
       provider: files
       file: secrets/api-token.txt
 ```
@@ -195,8 +199,8 @@ Secret settings:
 | `file` | The file. Relative to `dir`; absolute and `~` paths are used as given. Required. |
 | `format` | `yaml`, `json`, `edn` or `raw`. Default from the extension: `.yml`/`.yaml` → yaml, `.json` → json, `.edn` → edn, anything else → raw. |
 
-yaml and json files give a map (`<{ common.db.host }>`), edn gives the data as written, raw gives the text as one
-string (`<{ api-token }>`).
+yaml and json files give a map (`<{ secrets.common.db.host }>`), edn gives the data as written, raw gives the text as one
+string (`<{ secrets.api-token }>`).
 
 With (legacy) `local-path` and no `spit-key`, the file is copied unchanged. With `spit-key`, only that value is
 written.
@@ -260,7 +264,7 @@ x-compoje:
 services:
   web:
     environment:
-      TOKEN: <{ web.TOKEN }>
+      TOKEN: <{ secrets.web.TOKEN }>
 ```
 
 `WEB_TOKEN=s3cret bb compoje deploy --dry-run web/stack.tpl.yml` renders `TOKEN: s3cret`.

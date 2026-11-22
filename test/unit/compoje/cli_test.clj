@@ -163,3 +163,30 @@
         (spit (str f) "x-compoje:\n  docker:\n    stack: web\n  values:\n    n: 3\nservices:\n  a:\n    image: i\n    deploy:\n      replicas: <{ values.n }>\n")
         (is (str/includes? (with-out-str (cli/render {:stack-file (str f) :verbosity 0})) "replicas: 3"))
         (finally (fs/delete-tree dir))))))
+
+(deftest provider-results-under-secrets
+  (cli/register-default-providers!)
+  (let [dir (fs/create-temp-dir)
+        stack (fs/path dir "stack.tpl.yml")
+        write! (fn [env] (spit (str stack) (str "x-compoje:\n  docker:\n    stack: web\n"
+                                                "  providers:\n    - name: files\n      type: compoje.providers.file/file\n"
+                                                "  secrets:\n    - name: cloud\n      provider: files\n      file: cloud.yml\n"
+                                                "services:\n  a:\n    image: i\n    environment:\n" env)))]
+    (spit (str (fs/path dir "cloud.yml")) "JWT_SECRET: s3cret\n")
+    (try
+      (testing "secrets.<name>.<key> renders the provider result (the old compoje.edn layout)"
+        (write! "      JWT: <{ secrets.cloud.JWT_SECRET|yaml-str }>\n")
+        (is (str/includes? (with-out-str (cli/render {:stack-file (str stack) :verbosity 0})) "JWT: \"s3cret\"")))
+      (testing "an undefined secrets path is an error, not an empty value"
+        (write! "      JWT: <{ secrets.cloud.NOPE }>\n")
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"secrets.cloud.NOPE: no such provider result \(secrets: cloud\)"
+                              (cli/render {:stack-file (str stack) :verbosity 0}))))
+      (testing "a top-level reference to a secret is an error with a hint"
+        (write! "      JWT: <{ cloud.JWT_SECRET }>\n")
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"cloud.JWT_SECRET: provider results are under secrets; write secrets.cloud.JWT_SECRET"
+                              (cli/render {:stack-file (str stack) :verbosity 0}))))
+      (testing "other undefined variables are warnings; |default is fine"
+        (let [ctx (cli/deploy-context {:stack-file (str stack)})]
+          (is (= [(str stack ": template variable values.nope is not defined; it renders empty (add |default:\"...\" if that is intended)")]
+                 (cli/check-variables (str stack) "<{ values.nope }> <{ values.x|default:\"1\" }>" ctx)))))
+      (finally (fs/delete-tree dir)))))

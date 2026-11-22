@@ -9,7 +9,7 @@ a secret value can end up, so you can keep it out of disks, logs and git.
 |---|---|
 | The rendered stack | Never written. Passed to `docker stack deploy` on stdin (`docker-cli`), or kept in memory (`docker-api`). |
 | Docker secrets/configs with `x-compoje: {from: ...}` or `{template: ...}` | Created from memory: content on the docker CLI's stdin, or in the API request. Never written to a file or put on a command line. See [configuration.md](configuration.md#secrets-and-configs-from-memory). |
-| Provider results (`<{ app.password }>`) | In memory, in the rendered stack. |
+| Provider results (`<{ secrets.app.password }>`) | In memory, in the rendered stack. |
 
 You write something to disk only when you ask for it:
 
@@ -39,7 +39,7 @@ You write something to disk only when you ask for it:
 - Names generated as `<stack>_<key>-<hash>` include the first 10 hex digits (40 bits) of the content's SHA-256.
   For a short, guessable value (a PIN, a 6-letter password) that is enough to brute-force it from `docker secret ls`.
   Give such secrets an explicit `name` (e.g. `db_password-v3`) and change it yourself when the value changes.
-- Environment variables (`environment:` with `<{ app.password }>`) are visible in `docker service inspect` and to
+- Environment variables (`environment:` with `<{ secrets.app.password }>`) are visible in `docker service inspect` and to
   anyone who can inspect the containers. Prefer Docker secrets (files under `/run/secrets`) for real secrets.
 - A secret value rendered into the stack without `|yaml-str` can be silently changed: docker substitutes `$VAR` in
   the stack, and YAML special characters alter or break it. See

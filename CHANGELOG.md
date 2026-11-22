@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Breaking:** provider results are under `secrets` in templates again, `<{ secrets.<name>.<key> }>` (and `x-compoje: {from: secrets.<name>.<key>}`), as in compoje.edn stacks, so a secret name can never overwrite another context key. 0.3.0 had them at the top level (`<{ <name>.<key> }>`). `compoje migrate <dir>` rewrites 0.3.0 references in the stack file and in `x-compoje: {template: ...}` files. The check that rejected secret names like `values` is gone, as names can no longer collide.
+
+### Fixed
+- Stacks migrated from compoje.edn rendered empty secret values: their `<{ secrets.<name>... }>` references didn't match where 0.3.0 put provider results.
+- Undefined template variables rendered silently as empty strings. `deploy` and `render` now fail on an undefined `secrets.` path or a top-level reference to a secret, and warn about other undefined variables (unless they use `|default`). See docs/configuration.md, "Template variables".
+
 ### Added
 - Shell completion: `compoje completion bash|zsh` prints a script that completes commands, flags, flag values (engines, `--resolve-image`, docker contexts, `--set` paths) and stack files/directories, for `compoje ...` and `bb compoje ...` (other `bb` words still use bb's completion). The one-line installer installs it for bash (`--no-completion` to skip). See docs/install.md, "Shell completion".
 

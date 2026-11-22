@@ -20,9 +20,9 @@ services:
   app:
     image: docker.io/nginx:stable
     environment:
-      DB_USER: <{ app.db_user }>
-      API_TOKEN: <{ tokens.api_token }>
-      ENVIRONMENT: <{ tokens.environment }>
+      DB_USER: <{ secrets.app.db_user }>
+      API_TOKEN: <{ secrets.tokens.api_token }>
+      ENVIRONMENT: <{ secrets.tokens.environment }>
     secrets:
       - source: db_password
         target: db_password
@@ -34,7 +34,7 @@ secrets:
   # created by compoje from the decrypted value, in memory; never written to disk
   db_password:
     x-compoje:
-      from: app.db_password
+      from: secrets.app.db_password
 
 configs:
   nginx_cfg:

@@ -101,6 +101,55 @@
 (parser/add-tag! :file-hash file-hash)
 (parser/add-tag! :to-yaml to-yaml)
 
+(defn template-variables
+  "Variables used in <{ ... }> tags of template text:
+   [{:path [\"a\" \"b\"] :expr \"a.b|upper\" :default? bool}]. Variables bound by
+   <% for x in ... %> (and their sub-paths) are left out."
+  [text]
+  (let [loop-vars (set (mapcat (fn [[_ vars]] (map str/trim (str/split vars #",")))
+                               (re-seq #"<%\s*for\s+([\w\-,\s]+?)\s+in\s" text)))]
+    (->> (re-seq #"<\{\s*(.*?)\s*\}>" text)
+         (keep (fn [[_ expr]]
+                 (let [var-part (first (str/split expr #"\|"))
+                       path (str/split (str/trim var-part) #"\.")]
+                   (when (and (re-matches #"[\w\-.]+" (str/trim var-part))
+                              (not (loop-vars (first path)))
+                              (not (#{"forloop"} (first path))))
+                     {:path path :expr expr :default? (boolean (re-find #"\|\s*default" expr))}))))
+         distinct)))
+
+^:rct/test
+(comment
+  (map :path (template-variables "a <{ values.port }> <{ app.pw|yaml-str }> <% for p in values.ports %><{ p }><% endfor %>"))
+  ;=> [["values" "port"] ["app" "pw"]]
+  (:default? (first (template-variables "<{ values.x|default:\"1\" }>"))) ;=> true
+  (template-variables "<{ \"literal\" }>") ;=> []
+  )
+
+(defn- lookup [context path]
+  (reduce (fn [v seg]
+            (cond
+              (map? v) (if (contains? v (keyword seg)) (get v (keyword seg)) (reduced ::missing))
+              (and (sequential? v) (re-matches #"\d+" seg) (< (parse-long seg) (count v))) (nth v (parse-long seg))
+              :else (reduced ::missing)))
+          context path))
+
+(defn undefined-variables
+  "Variables of template `text` that `context` doesn't define (they render as
+   empty strings). Variables with a `default` filter are left out."
+  [text context]
+  (->> (template-variables text)
+       (remove :default?)
+       (filter #(contains? #{::missing nil} (lookup context (:path %))))
+       (mapv #(str/join "." (:path %)))))
+
+^:rct/test
+(comment
+  (undefined-variables "<{ values.port }> <{ secrets.cloud.K|yaml-str }> <{ cloud.K }> <{ values.x|default:\"1\" }> <{ ports.0 }>"
+                       {:values {:port 80} :secrets [{:name "cloud"}] :cloud {:K "s"} :ports [1]})
+  ;=> ["secrets.cloud.K"]
+  )
+
 (defn load-template
   ([template-file]
    (let [f (fs/file (fs/absolutize template-file))]

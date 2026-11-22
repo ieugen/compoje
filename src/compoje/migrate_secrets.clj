@@ -13,7 +13,7 @@
      secrets:                                 secrets:
        db_password:                             db_password:
          file: generated/pw.txt                   x-compoje:
-         name: db_password-<% file-hash ... %>      from: app.db_password
+         name: db_password-<% file-hash ... %>      from: secrets.app.db_password
 
    Every edit is checked: the edited text is parsed again and must equal the
    expected data; otherwise the edit is reverted and reported."
@@ -176,7 +176,7 @@
            (and (nil? spit-key) (not (result-is-string? s (get providers (str (get s "provider"))))))
            (skip "without spit-key the whole provider result (a map) is written; add spit-key, or use x-compoje: {from: <name>.<key>} by hand.")
            :else (update acc :convert conj {:secret sname :local-path lp
-                                            :from (if spit-key (str sname "." spit-key) sname)
+                                            :from (str "secrets." sname (when spit-key (str "." spit-key)))
                                             :defs (mapv (juxt :top :key) users)}))))
      {:convert [] :skip []}
      (get-in data ["x-compoje" "secrets"]))))
@@ -193,7 +193,7 @@
                                  {"name" "plain" "provider" "v"}]}
          "secrets" {"pw" {"file" "gen/pw.txt"} "tls" {"file" "gen/tls"} "tok" {"file" "gen/tok"}
                     "map" {"file" "gen/map"}}})
-  ;=> {:convert [{:secret "app" :local-path "./gen/pw.txt" :from "app.db_password" :defs [["secrets" "pw"]]} {:secret "tok" :local-path "gen/tok" :from "tok" :defs [["secrets" "tok"]]}] :skip [{:secret "tls" :local-path "gen/tls" :reason "spit-key cert.key contains a dot, which a from: path can't express; rename the key in the secret source (e.g. cert_key), or keep local-path."} {:secret "map" :local-path "gen/map" :reason "without spit-key the whole provider result (a map) is written; add spit-key, or use x-compoje: {from: <name>.<key>} by hand."} {:secret "unused" :local-path "gen/u" :reason "local-path is not used as a Docker secret or config file in this stack; left as is."}]}
+  ;=> {:convert [{:secret "app" :local-path "./gen/pw.txt" :from "secrets.app.db_password" :defs [["secrets" "pw"]]} {:secret "tok" :local-path "gen/tok" :from "secrets.tok" :defs [["secrets" "tok"]]}] :skip [{:secret "tls" :local-path "gen/tls" :reason "spit-key cert.key contains a dot, which a from: path can't express; rename the key in the secret source (e.g. cert_key), or keep local-path."} {:secret "map" :local-path "gen/map" :reason "without spit-key the whole provider result (a map) is written; add spit-key, or use x-compoje: {from: <name>.<key>} by hand."} {:secret "unused" :local-path "gen/u" :reason "local-path is not used as a Docker secret or config file in this stack; left as is."}]}
   )
 
 ;; ------------------------------------------------------------------ editing
@@ -289,3 +289,35 @@
                       (update :converted conj (assoc c :dropped-keys (vec (dropped-keys current (:defs c)))))))))
             {:text text :converted [] :skipped (vec skip)}
             convert)))
+
+;; ------------------------------------------------------------------ references
+
+(defn prefix-secret-refs
+  "Rewrite references to provider results at the top level of the context
+   (compoje 0.3.0: `<{ app.x }>`, `from: app.x`) to `secrets.<name>` for the
+   declared secret `names`: inside <{ }> / <% %> tags, and x-compoje `from:`
+   values. Returns [text count]."
+  [text names]
+  (if (empty? names)
+    [text 0]
+    (let [count* (atom 0)
+          alt (str/join "|" (map #(java.util.regex.Pattern/quote %) (sort-by count > names)))
+          ;; only where a variable can start (not inside 'path/file.ext' or "strings")
+          ref-re (re-pattern (str "(?<=[\\s{(,!=%])(" alt ")(?=[.\\s|}%]|$)"))
+          fix (fn [s] (str/replace s ref-re (fn [[_ n]] (swap! count* inc) (str "secrets." n))))
+          text (str/replace text #"<\{.*?\}>|<%.*?%>" (fn [tag] (fix tag)))
+          text (str/replace text (re-pattern (str "(?m)(\\bfrom:\\s*)(" alt ")(?=[.\\s,}#]|$)"))
+                            (fn [[_ pre n]] (swap! count* inc) (str pre "secrets." n)))]
+      [text @count*])))
+
+^:rct/test
+(comment
+  (prefix-secret-refs (str "A: <{ app.db_user }>\nB: <{ secrets.app.x }>\nC: <{ values.app }>\n"
+                           "D: <% if app.flag %>y<% endif %>\nE: <{ api-token|yaml-str }>\n"
+                           "    x-compoje:\n      from: app.db_password\n    x-compoje: {from: api-token}\n")
+                      ["app" "api-token"])
+  ;=> ["A: <{ secrets.app.db_user }>\nB: <{ secrets.app.x }>\nC: <{ values.app }>\nD: <% if secrets.app.flag %>y<% endif %>\nE: <{ secrets.api-token|yaml-str }>\n    x-compoje:\n      from: secrets.app.db_password\n    x-compoje: {from: secrets.api-token}\n" 5]
+  (prefix-secret-refs "A: <{ app.x }>" []) ;=> ["A: <{ app.x }>" 0]
+  (prefix-secret-refs "V: <% file-path 'generated/cert.pem' %> <% file-hash \"cert.pem\" %> <{cert.x}>" ["cert"])
+  ;=> ["V: <% file-path 'generated/cert.pem' %> <% file-hash \"cert.pem\" %> <{secrets.cert.x}>" 1]
+  )

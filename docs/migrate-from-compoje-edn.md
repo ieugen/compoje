@@ -147,12 +147,12 @@ x-compoje:
 secrets:
   db_password:
     x-compoje:
-      from: app.db_password
+      from: secrets.app.db_password
 ```
 
 ```console
 $ bb compoje migrate stacks/app
-Secret app: secrets.db_password now created from memory (x-compoje from: app.db_password); local-path removed.
+Secret app: secrets.db_password now created from memory (x-compoje from: secrets.app.db_password); local-path removed.
 Plaintext secret file stacks/app/generated/db_password.txt is no longer needed: delete it after a successful deploy.
 Migrated stacks/app/stack.tpl.yml. Review it.
 ```
@@ -161,7 +161,7 @@ How it works:
 
 - A provider secret with a `local-path` is converted when a top-level `secrets:` or `configs:` definition uses
   that path as its `file:`.
-- The definition becomes `x-compoje: {from: <secret>.<spit-key>}`, or `{from: <secret>}` when the whole result is
+- The definition becomes `x-compoje: {from: secrets.<secret>.<spit-key>}`, or `{from: secrets.<secret>}` when the whole result is
   a string (file provider with a raw file, ansible-vault with `format: raw`).
 - `local-path` and `spit-key` are removed, along with comment lines directly above them.
 - A `name:` built with `file-hash` is dropped: compoje names the object `<stack>_<key>-<hash>` itself. Any other
@@ -175,13 +175,30 @@ Secrets that can't be converted safely are left as they are, and the reason is p
 | Reason | What to do |
 |---|---|
 | `spit-key` contains a dot (`cert.key`) | `from:` paths split on dots. Rename the key in the secret source (`cert_key`), or keep `local-path`. |
-| No `spit-key`, and the result is a map | Add `spit-key`, or write `x-compoje: {from: <name>.<key>}` by hand. |
+| No `spit-key`, and the result is a map | Add `spit-key`, or write `x-compoje: {from: secrets.<name>.<key>}` by hand. |
 | `local-path` is not used as a `file:` of a secret or config | It may feed something else (a bind mount, another tool); left as is. |
 | The file is also used elsewhere in the template | E.g. a `file-path` tag or a volume. Edit by hand. |
 | Could not locate the definitions in the text | Flow style (`secrets: {pw: {file: x}}`) or unusual layout. Edit by hand. |
 
 Running `migrate` again is safe: converted secrets are left alone, and it reports "Nothing to migrate" when there is
 nothing left to do.
+
+## Stacks from compoje 0.3.0
+
+Templates reference provider results as `secrets.<name>...` (`<{ secrets.cloud.API_KEY }>`), as compoje.edn stacks
+always did. compoje 0.3.0 put them at the top level instead (`<{ cloud.API_KEY }>`, `from: cloud.API_KEY`).
+`migrate` rewrites those references for the declared secret names, in the stack file and in files used with
+`x-compoje: {template: ...}`:
+
+```console
+$ bb compoje migrate stacks/app
+Template: 4 reference(s) to provider results now use secrets.<name>.
+stacks/app/config/app.conf: 3 reference(s) to provider results now use secrets.<name>.
+Migrated stacks/app/stack.tpl.yml. Review it.
+```
+
+A reference it misses doesn't go unnoticed: `deploy` and `render` stop with "provider results are under secrets;
+write secrets.<name>...".
 
 ## Other errors
 

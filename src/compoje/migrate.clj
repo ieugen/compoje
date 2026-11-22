@@ -156,18 +156,36 @@
                                         template-file " has no x-compoje section.")
                                    {:dir (str dir)}))))
           {:keys [text converted skipped]} (migrate-secrets/convert text)
+          ;; compoje 0.3.0 stacks referenced provider results at the top level
+          names (for [sec (get-in (yaml/load text) ["x-compoje" "secrets"]) :when (get sec "name")]
+                  (str (get sec "name")))
+          [text refs] (migrate-secrets/prefix-secret-refs text names)
+          ;; files rendered with x-compoje: {template: ...} use the same context
+          template-files (vec (for [[_ defs] (select-keys (yaml/load text) ["secrets" "configs"])
+                                    [_ d] defs
+                                    :let [t (get-in d ["x-compoje" "template"])]
+                                    :when t
+                                    :let [f (fs/file dir t)]
+                                    :when (fs/exists? f)
+                                    :let [[new n] (migrate-secrets/prefix-secret-refs (slurp f) names)]
+                                    :when (pos? n)]
+                                {:file (str f) :text new :refs n}))
           plaintext (vec (for [{:keys [local-path]} converted
                                :let [f (fs/file dir local-path)]
                                :when (fs/exists? f)]
                            (str f)))
-          changed (not= template text)]
+          changed (boolean (or (not= template text) (seq template-files)))]
       (when (and changed (not dry-run))
         (spit template-file text)
         (log/debug "Wrote" (str template-file)))
+      (when-not dry-run
+        (doseq [{:keys [file text]} template-files] (spit file text)))
       {:file (str template-file)
        :text text
        :changed changed
        :edn edn?
+       :secret-refs refs
+       :template-files (mapv #(dissoc % :text) template-files)
        :converted converted
        :skipped skipped
        :plaintext-files plaintext})))

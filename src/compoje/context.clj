@@ -19,30 +19,35 @@
       (assoc-in context [:docker :stack] stack)))
 
 (defn final-context
-  "Deep merge contexts, overwriting values."
-  ([file-ctx cli-ctx & other]
-   (log/trace "Merge" file-ctx cli-ctx)
-   ;; TODO: some context validations
-   (apply u/deep-merge file-ctx cli-ctx other)))
+  "The render context: `ctx` (config, docker options, paths) with the
+   provider results under :secrets, keyed by secret name (`secrets.<name>` in
+   templates). Results live under their own key so a secret name can never
+   overwrite another context key. The secret declarations (x-compoje secrets)
+   are replaced by the results."
+  [ctx provider-results]
+  (log/trace "Final context" ctx)
+  (assoc ctx :secrets (or provider-results {})))
+
+^:rct/test
+(comment
+  (final-context {:values {:a 1} :secrets [{:name "app" :provider "v"}]} {:app {:pw "p"}})
+  ;=> {:values {:a 1} :secrets {:app {:pw "p"}}}
+  (final-context {:values {:a 1}} nil) ;=> {:values {:a 1} :secrets {}}
+  )
 
 (def redacted "<redacted>")
 
 (defn redact-secrets
-  "The context with every provider result (top-level keys named after the
-   declared secrets) replaced by \"<redacted>\". For printing."
+  "The context with every provider result (under :secrets) replaced by
+   \"<redacted>\". For printing."
   [ctx]
-  (reduce (fn [c n]
-            (let [k (keyword (str n))]
-              (cond-> c (contains? c k) (assoc k redacted))))
-          ctx
-          (keep :name (:secrets ctx))))
+  (cond-> ctx
+    (map? (:secrets ctx)) (update :secrets update-vals (constantly redacted))))
 
 ^:rct/test
 (comment
-  (redact-secrets {:secrets [{:name "app"} {:name "missing"}]
-                   :app {:password "p"}
-                   :values {:a 1}})
-  ;=> {:secrets [{:name "app"} {:name "missing"}] :app "<redacted>" :values {:a 1}}
+  (redact-secrets {:secrets {:app {:password "p"} :tok "t"} :values {:a 1}})
+  ;=> {:secrets {:app "<redacted>" :tok "<redacted>"} :values {:a 1}}
   (redact-secrets {:values {:a 1}}) ;=> {:values {:a 1}}
   )
 

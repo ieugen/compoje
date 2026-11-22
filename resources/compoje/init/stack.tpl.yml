@@ -40,4 +40,4 @@ configs:
 # secrets:
 #   db_password:
 #     x-compoje:
-#       from: app.db_password   # a Docker secret created from memory, never written to disk
+#       from: secrets.app.db_password   # a Docker secret created from memory, never written to disk

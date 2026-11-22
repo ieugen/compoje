@@ -4,6 +4,7 @@
             [clojure.test :refer [deftest is testing]]
             [compoje.cli :as cli]
             [compoje.config :as config]
+            [compoje.context :as context]
             [compoje.migrate :as migrate]
             [compoje.migrate-secrets :as ms]
             [compoje.render]
@@ -97,20 +98,24 @@
         result (migrate/migrate! dir {})
         data (yaml/load (slurp template-file))]
     (testing "two secrets converted, the one also used elsewhere skipped"
-      (is (= [["app" "app.db_password" [["secrets" "db_password"]]]
-              ["token" "token" [["secrets" "token"]]]]
+      (is (= [["app" "secrets.app.db_password" [["secrets" "db_password"]]]
+              ["token" "secrets.token" [["secrets" "token"]]]]
              (map (juxt :secret :from :defs) (:converted result))))
       (is (= ["cert"] (map :secret (:skipped result))))
       (is (re-find #"also used at line \d+" (-> result :skipped first :reason))))
     (testing "definitions become x-compoje from; explicit name and labels kept, file-hash name dropped"
-      (is (= {"x-compoje" {"from" "app.db_password"}} (get-in data ["secrets" "db_password"])))
-      (is (= {"x-compoje" {"from" "token"} "name" "token-v1" "labels" {"team" "ops"}}
+      (is (= {"x-compoje" {"from" "secrets.app.db_password"}} (get-in data ["secrets" "db_password"])))
+      (is (= {"x-compoje" {"from" "secrets.token"} "name" "token-v1" "labels" {"team" "ops"}}
              (get-in data ["secrets" "token"])))
       (is (= {"file" "generated/cert.pem"} (get-in data ["secrets" "cert"]))))
     (testing "local-path and spit-key removed from converted secrets only"
       (let [secrets (:secrets (config/file->config! template-file))]
         (is (= [nil nil "generated/cert.pem"] (map :local-path secrets)))
         (is (every? nil? (map :spit-key secrets)))))
+    (testing "0.3.0-style references to provider results now use secrets.<name>; paths in tags untouched"
+      (let [text (slurp template-file)]
+        (is (str/includes? text "DB_USER: <{ secrets.app.db_user }>"))
+        (is (str/includes? text "<% file-path 'generated/cert.pem' %>"))))
     (testing "comments survive; the one about the removed local-path goes with it"
       (let [text (slurp template-file)]
         (is (str/includes? text "# whole file encrypted with `ansible-vault encrypt`"))
@@ -135,7 +140,7 @@
       (fs/create-dirs (fs/file dir "generated"))
       (spit (str (fs/file dir "generated/cert.key")) "key")
       (let [stack-file (str (fs/file dir "stack.tpl.yml"))
-            ctx (assoc (cli/cli-config->context stack-file []) :db {:password "s3cret"})
+            ctx (context/final-context (cli/cli-config->context stack-file []) {:db {:password "s3cret"}})
             text (compoje.render/render stack-file ctx {})
             [_sent objects] (cli/prepare-stack ctx text)]
         (is (= [["db_password" "s3cret"]] (map (juxt :key :data) objects)))))))
@@ -156,5 +161,5 @@
         original (slurp template-file)
         result (migrate/migrate! dir {:dry-run true})]
     (is (:changed result))
-    (is (str/includes? (:text result) "from: app.db_password"))
+    (is (str/includes? (:text result) "from: secrets.app.db_password"))
     (is (= original (slurp template-file)) "dry-run writes nothing")))

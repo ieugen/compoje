@@ -4,8 +4,7 @@
    - docker: closed map with types and allowed values;
    - providers / secrets: the keys of the built-in providers are checked;
      custom provider types are left open;
-   - cross checks: secrets reference an existing provider, unique names,
-     secret names that would overwrite context keys;
+   - cross checks: secrets reference an existing provider, unique names;
    - other top-level keys are allowed (they reach the template) but get a
      warning, since they are often typos.
 
@@ -80,10 +79,6 @@
 
 (def known-keys #{:docker :providers :secrets :values})
 
-(def reserved-names
-  "Context keys a secret name must not overwrite (see docs/configuration.md)."
-  #{"docker" "providers" "secrets" "values" "template-dir" "config-file" "work-dir"})
-
 ;; ------------------------------------------------------------------ messages
 
 (defn- path-str [path]
@@ -156,9 +151,6 @@
                                      (if (seq provider-type)
                                        (str " (providers: " (str/join ", " (sort (keys provider-type))) ")")
                                        " (no providers are declared)"))])
-                             (when (reserved-names (str (:name s)))
-                               [(str "secrets[" i "].name: " (:name s) " would overwrite the context key of the same name;"
-                                     " choose another name")])
                              (explain (secret-schema type) s [:secrets i]))))
                         (range) secrets)
                 (dupes "provider" providers)
@@ -180,7 +172,7 @@
   ;=> ["unknown x-compoje key extra (kept, and available in the template)" "unknown x-compoje key valus; did you mean values?"]
   (:errors (validate {:providers [{:name "v" :type "compoje.providers.file/file" :dri "x"}]
                       :secrets [{:name "values" :provider "vualt" :file "f"}]}))
-  ;=> ["providers[0].dri: unknown key; did you mean dir?" "secrets[0].name: values would overwrite the context key of the same name; choose another name" "secrets[0].provider: unknown provider vualt (providers: v)"]
+  ;=> ["providers[0].dri: unknown key; did you mean dir?" "secrets[0].provider: unknown provider vualt (providers: v)"]
   (:errors (validate {:providers [{:name "f" :type "compoje.providers.file/file"}]
                       :secrets [{:name "a" :provider "f"} {:name "a" :provider "f" :file "x"}]}))
   ;=> ["secret name a is used 2 times" "secrets[0].file: missing required key"]

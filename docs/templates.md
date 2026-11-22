@@ -25,7 +25,7 @@ Output is not HTML-escaped: `<{ x }>` writes the value as it is.
 ```yaml
 replicas: <{ values.replicas }>
 image: "registry.example.com/web:<{ values.tag }>"
-password: <{ app.db_password|yaml-str }>   # a secret named "app", safely quoted
+password: <{ secrets.app.db_password|yaml-str }>   # a secret named "app", safely quoted
 stack: <{ docker.stack }>
 ```
 
@@ -60,12 +60,12 @@ The rendered stack is still a compose file, so two things can change a value on 
 
 | Filter | Output for `pa$word: x#y "q"` | Use |
 |---|---|---|
-| `yaml-str` | `"pa$$word: x#y \"q\""` | Any value you don't control: write it unquoted, `KEY: <{ app.secret\|yaml-str }>`. Quotes and escapes for YAML, and doubles `$`. |
+| `yaml-str` | `"pa$$word: x#y \"q\""` | Any value you don't control: write it unquoted, `KEY: <{ secrets.app.secret\|yaml-str }>`. Quotes and escapes for YAML, and doubles `$`. |
 | `escape-dollar` | `pa$$word: x#y "q"` | Only doubles `$` (docker turns `$$` back into `$`). You do the YAML quoting, e.g. `'<{ x\|escape-dollar }>'` for values without `'`. |
 
 ```yaml
 environment:
-  DB_PASSWORD: <{ app.db_password|yaml-str }>
+  DB_PASSWORD: <{ secrets.app.db_password|yaml-str }>
 ```
 
 Both give the service the exact value with either engine. For secrets, prefer a Docker secret
@@ -109,8 +109,8 @@ x-values:
 <% to-yaml values %>
 ```
 
-Writes a context entry as block-style YAML. The argument must be a **top-level** context key: `values`, a secret
-name, `docker`. `to-yaml values.resources` renders `null`. Only the first line is indented, so put the tag at
+Writes a context entry as block-style YAML. The argument must be a **top-level** context key: `values`, `docker`
+(or `secrets`, which writes every provider result: rarely what you want). `to-yaml values.resources` renders `null`. Only the first line is indented, so put the tag at
 column 0, where the output is meant to start.
 
 ## Control flow

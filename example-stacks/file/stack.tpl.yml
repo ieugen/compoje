@@ -5,7 +5,7 @@ x-compoje:
     - name: files
       type: compoje.providers.file/file
   secrets:
-    # plain YAML values, used in the template as <{ common.... }>
+    # plain YAML values, used in the template as <{ secrets.common.... }>
     - name: common
       provider: files
       file: shared/common.yml
@@ -18,9 +18,9 @@ services:
   app:
     image: docker.io/nginx:stable
     environment:
-      REGION: <{ common.region }>
-      LOG_LEVEL: <{ common.log-level }>
-      DB_URL: "postgres://<{ common.db.host }>:<{ common.db.port }>/app"
+      REGION: <{ secrets.common.region }>
+      LOG_LEVEL: <{ secrets.common.log-level }>
+      DB_URL: "postgres://<{ secrets.common.db.host }>:<{ secrets.common.db.port }>/app"
     secrets:
       - source: api_token
         target: api_token
@@ -32,7 +32,7 @@ secrets:
   # created by compoje from the provider result, in memory
   api_token:
     x-compoje:
-      from: api-token
+      from: secrets.api-token
 
 configs:
   # config/app.conf is a template, rendered in memory with the same context

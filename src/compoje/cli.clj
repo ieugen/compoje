@@ -113,6 +113,30 @@
         provider-results (providers/provide-secrets ctx)]
     (context/final-context ctx provider-results)))
 
+(defn check-variables
+  "Check the variables of template `text` against `context` before rendering.
+   Undefined variables render as empty strings, so: a `secrets.` path or a
+   top-level reference to a declared secret is an error (an empty secret is
+   never intended); any other undefined variable is a warning. Returns the
+   warnings; throws with all errors."
+  [template-file text context]
+  (let [secret-names (set (map name (keys (:secrets context))))
+        undefined (render/undefined-variables text context)
+        error? #(or (str/starts-with? % "secrets.") (secret-names (first (str/split % #"\."))))
+        errors (for [v undefined :when (error? v)]
+                 (if (str/starts-with? v "secrets.")
+                   (str v ": no such provider result (secrets: "
+                        (if (seq secret-names) (str/join ", " (sort secret-names)) "none declared") ")")
+                   (str v ": provider results are under secrets; write secrets." v
+                        " (compoje migrate rewrites old references)")))]
+    (when (seq errors)
+      (throw (ex-info (str "Undefined template variables in " template-file
+                           " (they would render empty):\n  " (str/join "\n  " errors))
+                      {:file (str template-file)})))
+    (vec (for [v undefined :when (not (error? v))]
+           (str template-file ": template variable " v " is not defined; it renders empty"
+                " (add |default:\"...\" if that is intended)")))))
+
 (defn- render-stack
   "Build the context (providers included) and render the stack template.
    Returns [context rendered-stack]."
@@ -124,6 +148,8 @@
         ;; the stack file is the template: render the file that was passed
         template-file (str (:config-file context))]
     (log/trace "Context" context)
+    (doseq [w (check-variables template-file (render/load-template template-file) context)]
+      (log/warn w))
     [context (render/render template-file context {})]))
 
 (defn prepare-stack
@@ -140,7 +166,11 @@
                    parsed
                    {:context context
                     :stack-name (:stack docker)
-                    :render-template #(render/render (str (fs/file template-dir %)) context {})})
+                    :render-template (fn [path]
+                                       (let [f (str (fs/file template-dir path))]
+                                         (doseq [w (check-variables f (render/load-template f) context)]
+                                           (log/warn w))
+                                         (render/render f context {})))})
           externalized (stack/externalize parsed objects)]
       [(json/generate-string externalized) objects externalized])))
 
@@ -254,9 +284,13 @@
 
 (defn- migrate-report
   "Human-readable lines about a migrate! result."
-  [{:keys [file changed edn converted skipped plaintext-files]} dry-run]
+  [{:keys [file changed edn secret-refs template-files converted skipped plaintext-files]} dry-run]
   (concat
    (when edn ["compoje.edn: config moved into the x-compoje section."])
+   (when (pos? (or secret-refs 0))
+     [(str "Template: " secret-refs " reference(s) to provider results now use secrets.<name>.")])
+   (for [{:keys [file refs]} template-files]
+     (str file ": " refs " reference(s) to provider results now use secrets.<name>."))
    (for [{:keys [secret from defs dropped-keys]} converted]
      (str "Secret " secret ": " (str/join ", " (map #(str/join "." %) defs))
           " now created from memory (x-compoje from: " from "); local-path removed."

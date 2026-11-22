@@ -17,7 +17,7 @@ content hashes to config and secret names, and runs `docker stack deploy`.
 - [security.md](security.md): where secret values can end up, and how to keep them off disk and out of logs
 - [providers.md](providers.md): secret providers (ansible-vault, HashiCorp Vault, plain files) and writing your own
 - [ansible-vault.md](ansible-vault.md): secrets in ansible-vault files, in detail
-- [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md): moving old `compoje.edn` stacks to `x-compoje:`
+- [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md): moving old `compoje.edn` stacks (and 0.3.0 stacks) to the current format
 - [known-issues.md](known-issues.md): known limitations and bugs
 - [../example-stacks/](../example-stacks/): example stacks (nginx, redis, ansible-vault, file)
 
