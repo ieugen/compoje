@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+
+## [0.2.0] - 2026-11-22
+
 ### Added
 - Distribution: `compoje --version` (from `resources/compoje/VERSION`), bbin support (`:bbin/bin` in bb.edn), `bb build-jar` builds `target/compoje.jar` (runs with only bb). GitHub Actions: CI on every push, and a release workflow that publishes `compoje.jar` on `vX.Y.Z` tags. See docs/install.md and docs/releasing.md.
 - File provider (`compoje.providers.file/file`): loads plain YAML, JSON, EDN or text files (format from the extension), with optional `dir`, `local-path` and `spit-key`. See docs/providers.md and `example-stacks/file/`.
