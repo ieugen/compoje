@@ -10,6 +10,7 @@
             [compoje.deploy.docker :as docker]
             [compoje.deploy.swarm-convert :as swarm-convert]
             [compoje.docker.endpoint :as endpoint]
+            [compoje.init :as init]
             [compoje.logging :as clog]
             [compoje.migrate :as migrate]
             [compoje.providers :as providers]
@@ -276,6 +277,25 @@
       (log/info line)))
   ::done)
 
+(defn init
+  "Create a new stack directory.
+
+  Writes <dir>/stack.tpl.yml (an x-compoje section, an example nginx service
+  and a config rendered from html/index.html), html/index.html and a
+  .gitignore. The stack name defaults to the directory name. An existing
+  stack.tpl.yml is not overwritten unless --force; an existing .gitignore is
+  always kept."
+  {:flags ["--stack NAME" "Stack name (default: the directory name)."
+           "--force" {:doc "Overwrite an existing stack.tpl.yml and html/index.html."
+                      :value true}]}
+  [{:keys [dir stack force verbosity]}]
+  (set-hooman-logging! verbosity)
+  (doseq [{:keys [path action]} (init/init! dir {:stack stack :force force})]
+    (log/info (case action :created "Created" :overwritten "Overwrote" :kept "Kept existing") path))
+  (log/info (str "\nNext: compoje deploy --dry-run " (fs/path dir "stack.tpl.yml")
+                 "\n      (or bb compoje ... when compoje runs as a bb task)"))
+  ::done)
+
 (defn version
   "compoje version, from resources/compoje/VERSION (\"unknown\" if missing)."
   []
@@ -294,7 +314,8 @@
            "--version" "Print the compoje version and exit."]
    :commands ["deploy <stack-file>" #'deploy
               "render <stack-file>" #'render
-              "migrate <dir>" #'migrate]})
+              "migrate <dir>" #'migrate
+              "init <dir>" #'init]})
 
 (defn- help-requested? [args]
   (some #{"-h" "--help" "help"} args))

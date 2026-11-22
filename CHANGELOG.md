@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `init` command: `bb compoje init [--stack NAME] [--force] <dir>` scaffolds a stack directory (stack.tpl.yml with an x-compoje section, an nginx service with an in-memory templated config, html/index.html, .gitignore). See docs/cli.md.
 - Template filters `yaml-str` (quote and escape a value for YAML, including `$`) and `escape-dollar` (`$` → `$$`), so secret values survive YAML and docker's variable substitution unchanged. See docs/templates.md, "Escaping values".
 - Development: `bb lint` (clj-kondo + clojure-lsp diagnostics, run in CI) and `bb vuln-scan` (clj-watson: NVD database with an NVD API key, else the GitHub Advisory Database; weekly CI workflow), with `dependency-check-suppressions.xml` for reviewed findings, and `bb deps-why <group/artifact>` to see which dependency pulls a library in (including shaded copies inside other jars). `bb fmt` now also covers `script/` and `install.clj`.
 - One-line installer: `bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))'` installs the latest release as a `compoje` command (checksum-verified jar in `~/.local/share/compoje`, launcher in `~/.local/bin`); options `--version`, `--dir`, `--uninstall`. See docs/install.md.

@@ -6,7 +6,7 @@ compoje runs as a Babashka task, usually named `compoje` in your `bb.edn` (see [
 bb compoje [global flags] <command> [command flags] <argument>
 ```
 
-Commands: [`deploy`](#deploy), [`render`](#render) and [`migrate`](#migrate).
+Commands: [`init`](#init), [`deploy`](#deploy), [`render`](#render) and [`migrate`](#migrate).
 
 `bb compoje --help` and `bb compoje <command> --help` print the built-in help.
 
@@ -72,6 +72,28 @@ bb compoje deploy --context prod --prune stacks/web/stack.tpl.yml
 bb compoje deploy --stack web-test --set values.replicas=1 stacks/web/stack.tpl.yml
 bb compoje -v deploy --dry-run stacks/web/stack.tpl.yml
 ```
+
+## init
+
+```bash
+bb compoje init [--stack NAME] [--force] <dir>
+```
+
+Creates a new stack directory with a working example:
+
+| File | Content |
+|---|---|
+| `stack.tpl.yml` | An `x-compoje` section (stack name, example values, commented provider and secret examples) and an nginx service. Its page is a config rendered from `html/index.html` in memory (`x-compoje: {template: ...}`). A commented in-memory Docker secret (`x-compoje: {from: ...}`) shows how secrets go in. |
+| `html/index.html` | The page, a template using `<{ values.greeting }>`. |
+| `.gitignore` | Ignores `*.generated.yml` and `generated/`. |
+
+| Flag | Meaning |
+|---|---|
+| `--stack NAME` | Stack name (lower case letters, digits, `-`, `_`). Default: the directory name, made valid (`My Web` → `my-web`). |
+| `--force` | Overwrite an existing `stack.tpl.yml` and `html/index.html`. Without it an existing `stack.tpl.yml` is an error. An existing `.gitignore` is always kept. |
+
+Then `bb compoje deploy --dry-run <dir>/stack.tpl.yml` shows what it would deploy; `bb compoje deploy ...` deploys it
+and serves the page on port 8080.
 
 ## render
 

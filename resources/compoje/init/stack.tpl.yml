@@ -1,0 +1,43 @@
+# A compoje stack: a compose file plus an x-compoje section.
+# Try it:  compoje deploy --dry-run stack.tpl.yml
+# Docs:    https://github.com/ieugen/compoje/tree/main/docs
+x-compoje:
+  docker:
+    stack: @STACK@
+  values:
+    replicas: 1
+    port: 8080
+    greeting: Hello from compoje
+  # Secrets come from providers (ansible-vault, HashiCorp Vault, plain files); see docs/providers.md.
+  # providers:
+  #   - name: vault
+  #     type: compoje.providers.ansible-vault/ansible-vault
+  #     password-file: ~/.vault-pass
+  # secrets:
+  #   - name: app
+  #     provider: vault
+  #     file: secrets/app.vault.yml
+
+services:
+  web:
+    image: docker.io/nginx:stable
+    ports:
+      - "<{ values.port }>:80"
+    deploy:
+      replicas: <{ values.replicas }>
+    configs:
+      - source: index
+        target: /usr/share/nginx/html/index.html
+    # secrets:
+    #   - db_password
+
+configs:
+  # html/index.html rendered with the same values, in memory; a changed page gets a new config name
+  index:
+    x-compoje:
+      template: html/index.html
+
+# secrets:
+#   db_password:
+#     x-compoje:
+#       from: app.db_password   # a Docker secret created from memory, never written to disk

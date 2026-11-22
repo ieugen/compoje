@@ -64,6 +64,9 @@ Other ways to install it, all described in [[file:docs/install.md][docs/install.
 # display help (also works per command: bb compoje deploy --help)
 bb compoje --help
 
+# Create a new stack directory with a working example
+bb compoje init my-stack
+
 # Render and show the stack and the docker command, without deploying
 bb compoje deploy --dry-run example-stacks/nginx/stack.tpl.yml
 
@@ -77,7 +80,6 @@ See the [[file:docs/quick-start.md][quick start guide]] for a full walk-through,
 
 Still to do, in order (details in [[file:docs/known-issues.md][docs/known-issues.md]] where noted):
 
-- [ ] =compoje init <dir>= to scaffold a new stack directory (replaces the old "stack initialization with compoje.edn" item)
 - [ ] Validate the =x-compoje= configuration with malli: unknown keys, missing provider references, secret names that
   clash with context keys
 - [ ] Deprecate the provider =local-path= option (it writes secrets to disk); =compoje migrate= already converts it
@@ -88,6 +90,8 @@ Done or dropped:
 
 - Render, dry run, deploy, =--set= values, HashiCorp Vault, ansible-vault and file providers, documentation and
   examples, the =to-yaml= tag, installation via bb, bbin and a one-line installer.
+- Scaffolding a new stack: =compoje init <dir>= ([[file:docs/cli.md][docs/cli.md]]); replaces the old "stack
+  initialization with compoje.edn" item.
 - Escaping secret values in templates: the =escape-dollar= and =yaml-str= filters
   ([[file:docs/templates.md][docs/templates.md]]).
 - Deploying without the docker client: the =docker-api= engine ([[file:docs/engines.md][docs/engines.md]]).

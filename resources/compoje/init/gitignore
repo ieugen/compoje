@@ -1,0 +1,3 @@
+# compoje: rendered stacks (`compoje render -o`) and legacy local-path secrets can contain secret values
+*.generated.yml
+generated/

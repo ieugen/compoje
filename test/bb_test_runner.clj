@@ -10,6 +10,7 @@
    [unit.compoje.docker.client-test]
    [unit.compoje.docker.endpoint-test]
    [unit.compoje.docker.tls-test]
+   [unit.compoje.init-test]
    [unit.compoje.migrate-test]
    [unit.compoje.providers.ansible-vault-test]
    [unit.compoje.providers.file-test]
@@ -27,6 +28,7 @@
    'unit.compoje.docker.client-test
    'unit.compoje.docker.endpoint-test
    'unit.compoje.docker.tls-test
+   'unit.compoje.init-test
    'unit.compoje.migrate-test
    'unit.compoje.providers.ansible-vault-test
    'unit.compoje.providers.file-test])

@@ -70,6 +70,9 @@ SUBCOMMANDS
 
 ## Your first stack
 
+The quickest start is `bb compoje init hello`: it creates a `hello/` directory with a working stack you can deploy
+right away (see [cli.md](cli.md#init)). This guide builds a similar stack by hand, so you see each part.
+
 A compoje stack file is a normal compose file plus an `x-compoje:` section with compoje's settings.
 Docker ignores `x-` keys, so the rendered file stays a valid compose file.
 
