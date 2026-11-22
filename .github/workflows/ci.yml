@@ -37,9 +37,10 @@ jobs:
       - name: Lint
         run: bb lint
 
-      # unit + integration; integration tests start containers on the runner's Docker
+      # unit + integration; integration tests start containers on the runner's Docker.
+      # Tests that need a swarm (^:swarm, Docker-in-Docker swarm) don't run on GitHub Actions; run them locally.
       - name: JVM tests
-        run: bin/kaocha
+        run: bin/kaocha --skip-meta :swarm
 
       - name: Babashka tests
         run: bb test-bb

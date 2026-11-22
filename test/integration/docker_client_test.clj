@@ -16,9 +16,9 @@
       (is (string? (get-in (client/request conn :get "/info") [:body "ID"])))
       (is (= "OK" (:body (client/request conn :get "/_ping"))))
       (is (map? (:body (client/request conn :get "/version")))))
-    (testing "API errors"
-      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"404"
-                            (client/request conn :get "/secrets/compoje-no-such-secret"))))))
+    (testing "API errors (an endpoint every daemon has; /secrets needs a swarm manager)"
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"404 No such container: compoje-no-such-container"
+                            (client/request conn :get "/containers/compoje-no-such-container/json"))))))
 
 (deftest dial-stdio
   (client/with-connection [conn {:scheme :process

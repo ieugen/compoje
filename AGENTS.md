@@ -5,6 +5,7 @@ compoje is a templating and deploy tool for Docker Swarm stacks, written in Cloj
 Documentation lives under docs/. Keep existing files in their current format (README.org and docs/docs.org are Org-mode; edit them as Org). docs/README.md is the documentation index; add new docs to it. **Write new documentation as Markdown files under docs/** (e.g. docs/known-issues.md, docs/dependency-updates.md).
 
 ## Commands
+- Swarm tests: test/integration/swarm_engines_test.clj is tagged `^:swarm` (it needs a Docker-in-Docker swarm). GitHub Actions has no swarm, so CI and release run `bin/kaocha --skip-meta :swarm`; run the full `bin/kaocha` locally before releasing. Tag any new test that needs a swarm `^:swarm`.
 - **Run tests with `bin/kaocha`** (the canonical test command; it wraps `clojure -M:test`). Extra args pass through to kaocha: `bin/kaocha unit`, `bin/kaocha integration`, `bin/kaocha --focus unit.compoje.render-test`, `bin/kaocha --watch`.
 - Run CLI (bb): `bb compoje deploy [--dry-run] [--set a.b=v] path/to/stack.tpl.yml`
 - Babashka tests: `bb test-bb` (all rich-comment-tests in src/ plus the namespaces listed in test/bb_test_runner.clj)

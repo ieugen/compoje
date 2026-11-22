@@ -44,7 +44,8 @@ jobs:
       - name: Tests
         run: |
           bb fmt check
-          bin/kaocha
+          # swarm tests (^:swarm) don't run on GitHub Actions; docs/releasing.md runs them locally
+          bin/kaocha --skip-meta :swarm
           bb test-bb
 
       - name: Build the jar

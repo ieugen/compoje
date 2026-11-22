@@ -19,7 +19,7 @@ next version with `-SNAPSHOT`, e.g. `0.3.0-SNAPSHOT`.
 4. Check locally:
 
    ```bash
-   bb fmt check && bb lint && bin/kaocha && bb test-bb
+   bb fmt check && bb lint && bin/kaocha && bb test-bb   # bin/kaocha includes the ^:swarm tests CI skips
    NVD_API_KEY=... bb vuln-scan                       # or check the latest Vulnerabilities workflow run
    bb build-jar && bb target/compoje.jar --version    # compoje 0.2.0
    ```
@@ -33,7 +33,7 @@ next version with `-SNAPSHOT`, e.g. `0.3.0-SNAPSHOT`.
 
 6. The tag starts [.github/workflows/release.yml](../.github/workflows/release.yml). It:
    - fails if `VERSION` doesn't match the tag
-   - runs all tests and builds `compoje.jar`, then checks `compoje.jar --version` and a dry-run deploy
+   - runs the tests (except the `^:swarm` ones, which need a swarm GitHub Actions lacks; step 4 runs them locally) and builds `compoje.jar`, then checks `compoje.jar --version` and a dry-run deploy
    - creates the GitHub release with `compoje.jar` and `compoje.jar.sha256`. The notes are the CHANGELOG section
      plus install snippets with the tag and sha, including the one-line installer pinned to the tag.
 

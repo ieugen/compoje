@@ -1,4 +1,4 @@
-(ns integration.swarm-engines-test
+(ns ^:swarm integration.swarm-engines-test
   "End-to-end tests of the docker-api engine against a throwaway swarm
    (Docker-in-Docker with TLS and sshd, test-resources/swarm/dind/Dockerfile).
    Needs Docker (privileged containers) and a local `ssh` client.
