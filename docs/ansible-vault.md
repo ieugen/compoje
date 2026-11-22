@@ -30,8 +30,6 @@ x-compoje:
     - name: app
       provider: my-vault
       file: secrets/app.vault.yml
-      local-path: generated/db_password.txt   # optional: write a decrypted file
-      spit-key: db_password                   # optional: write only this key
     # plain YAML with inline `!vault` values
     - name: tokens
       provider: my-vault
@@ -48,12 +46,13 @@ services:
 
 secrets:
   db_password:
-    file: generated/db_password.txt
-    name: db_password-<% file-hash 'generated/db_password.txt' %>
+    x-compoje:
+      from: app.db_password   # Docker secret created by compoje from memory
 ```
 
 Each secret's decrypted content is available in the template under the secret's `name`
-(`<{ app.db_user }>` above).
+(`<{ app.db_user }>` above). `x-compoje.from` turns a value into a Docker secret without writing it to disk; see
+[configuration.md](configuration.md#secrets-and-configs-from-memory).
 
 ### Provider options
 
@@ -75,12 +74,13 @@ An empty or missing password is an error.
 | `provider` | Name of an ansible-vault provider. |
 | `file` | The file to read, relative to the stack file's directory. A whole-file vault is decrypted first. |
 | `format` | `yaml` (default): parse the content as YAML, decrypting inline `!vault` values. `raw`: keep the decrypted text as a string. |
-| `local-path` | Optional. Write the content to this file (relative to the stack directory), e.g. for a Docker secret's `file:`. |
+| `local-path` | Legacy, optional. Write the decrypted content to this file (relative to the stack directory). Prefer `x-compoje.from`. |
 | `spit-key` | Optional, with `local-path`. Write only this key of the YAML content. |
 
 ### Security notes
 
-- `local-path` files contain decrypted secrets. They are written on every run, including `--dry-run`.
+- Docker secrets declared with `x-compoje.from` never touch the disk.
+- Legacy `local-path` files contain decrypted secrets. They are written on every run, including `--dry-run`.
   Keep them out of version control (the example's `.gitignore` excludes `generated/`).
 - Values used in the template end up decrypted in the rendered stack. compoje passes it to docker on stdin and
   doesn't write it to disk, but `render` and `deploy --dry-run` print it. In the context printed by `--dry-run`,

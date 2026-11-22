@@ -1,3 +1,3 @@
-# decrypted secrets and rendered output contain secret values
+# local-path output and rendered stacks saved with render -o can contain secret values
 generated/
-stack.generated.yml
+*.generated.yml

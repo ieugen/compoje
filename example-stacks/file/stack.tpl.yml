@@ -9,11 +9,10 @@ x-compoje:
     - name: common
       provider: files
       file: shared/common.yml
-    # a secret file already on disk (e.g. written by CI), copied for a docker secret
+    # a secret file already on disk (e.g. written by CI), used for a docker secret below
     - name: api-token
       provider: files
       file: secrets/api-token.txt
-      local-path: generated/api-token.txt
 
 services:
   app:
@@ -25,8 +24,18 @@ services:
     secrets:
       - source: api_token
         target: api_token
+    configs:
+      - source: app_conf
+        target: /etc/app/app.conf
 
 secrets:
+  # created by compoje from the provider result, in memory
   api_token:
-    file: generated/api-token.txt
-    name: api_token-<% file-hash 'generated/api-token.txt' %>
+    x-compoje:
+      from: api-token
+
+configs:
+  # config/app.conf is a template, rendered in memory with the same context
+  app_conf:
+    x-compoje:
+      template: config/app.conf

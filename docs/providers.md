@@ -43,7 +43,7 @@ Keys that every secret entry has:
 |---|---|
 | `name` | Name of the result in the template context. Required. Use a name that is not already a context key (`docker`, `values`, `secrets`, ...); see [known-issues.md](known-issues.md). |
 | `provider` | The `name` of a provider. Required. |
-| `local-path` | Optional. Also write the secret to this file, relative to the stack directory. Parent directories are created. Use it for Docker secrets, which are read from files. |
+| `local-path` | Legacy, optional. Also write the secret **in plain text** to this file, relative to the stack directory. Prefer [in-memory Docker secrets](#docker-secrets-without-files). |
 | `spit-key` | Optional, with `local-path`. Write only this key of the result, not all of it. |
 
 The other keys depend on the provider.
@@ -57,8 +57,14 @@ environment:
   DB_USER: <{ app.db_user }>
 ```
 
-To give a secret to a service as a Docker secret, write it to a file with `local-path` and add a content hash to the
-secret name, so changing the value creates a new Docker secret:
+Values used this way end up in the rendered stack. compoje doesn't write the rendered stack to disk, but `render`
+and `deploy --dry-run` print it.
+
+### Docker secrets without files
+
+To give a secret to a service as a Docker secret, point a top-level secret definition at the provider result with
+`x-compoje.from`. compoje creates the Docker secret itself, from memory. Nothing is written to disk, and the value is
+not in the rendered stack:
 
 ```yaml
 x-compoje:
@@ -66,8 +72,6 @@ x-compoje:
     - name: app
       provider: team-vault
       file: secrets/app.yml
-      local-path: generated/db_password.txt
-      spit-key: db_password
 
 services:
   app:
@@ -77,12 +81,18 @@ services:
 
 secrets:
   db_password:
-    file: generated/db_password.txt
-    name: db_password-<% file-hash 'generated/db_password.txt' %>
+    x-compoje:
+      from: app.db_password      # path in the context: secret "app", key "db_password"
 ```
 
-Files written with `local-path` contain the secret in plain text, and they are written on `--dry-run` too. Keep them
-out of git, e.g. with a `generated/` entry in `.gitignore`.
+Configs work the same way, and can also be a template rendered in memory. See
+[configuration.md](configuration.md#secrets-and-configs-from-memory) for all the details: naming, labels, cleanup.
+
+### Writing secrets to files (legacy)
+
+`local-path` writes a provider result to a file, which a compose `file:` definition can then use. The file contains the
+secret in plain text, and it is written on `--dry-run` too. Use `x-compoje.from` instead. If you still use
+`local-path`, keep the files out of git, e.g. with a `generated/` entry in `.gitignore`.
 
 ## ansible-vault
 
@@ -123,8 +133,6 @@ x-compoje:
       provider: vault
       mount-path: secret        # the KV v2 mount
       secret-path: web/nginx    # path of the secret in the mount
-      local-path: generated/cert.key
-      spit-key: cert.key
 ```
 
 Provider settings (each has a fallback):
@@ -148,8 +156,8 @@ Secret settings:
 | `opts` | Optional read options passed to vault-clj's `read-secret`, e.g. `{version: 3}`. |
 | `format` | With `local-path` and no `spit-key`: write the whole secret as `edn` or `json`. |
 
-The result is the secret's key/value map: `<{ nginx.username }>`. Keys that contain dots, like `cert.key`, can't be
-used in a template path; write them to a file with `spit-key` instead.
+The result is the secret's key/value map: `<{ nginx.username }>`, or `from: nginx.username` for a Docker secret.
+Keys that contain dots, like `cert.key`, can't be used in a path; name your Vault keys without dots (`cert_key`).
 
 If a secret can't be read, compoje logs the error and exits with a non-zero code.
 
@@ -168,10 +176,9 @@ x-compoje:
     - name: common                    # <{ common.db.host }>
       provider: files
       file: shared/common.yml
-    - name: api-token                 # copied for a docker secret
+    - name: api-token                 # a raw string: x-compoje {from: api-token}
       provider: files
       file: secrets/api-token.txt
-      local-path: generated/api-token.txt
 ```
 
 Provider settings:
@@ -190,7 +197,8 @@ Secret settings:
 yaml and json files give a map (`<{ common.db.host }>`), edn gives the data as written, raw gives the text as one
 string (`<{ api-token }>`).
 
-With `local-path` and no `spit-key`, the file is copied unchanged. With `spit-key`, only that value is written.
+With (legacy) `local-path` and no `spit-key`, the file is copied unchanged. With `spit-key`, only that value is
+written.
 
 A runnable example: `example-stacks/file/` (`bb compoje deploy --dry-run example-stacks/file/stack.tpl.yml`).
 

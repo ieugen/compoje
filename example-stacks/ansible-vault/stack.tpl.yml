@@ -11,9 +11,6 @@ x-compoje:
     - name: app
       provider: demo-vault
       file: secrets/app.vault.yml
-      # write one decrypted value to a file, used as a docker secret below
-      local-path: generated/db_password.txt
-      spit-key: db_password
     # plain YAML with inline `!vault` values
     - name: tokens
       provider: demo-vault
@@ -34,9 +31,10 @@ services:
         target: /etc/nginx/conf.d/default.conf
 
 secrets:
+  # created by compoje from the decrypted value, in memory; never written to disk
   db_password:
-    file: generated/db_password.txt
-    name: db_password-<% file-hash 'generated/db_password.txt' %>
+    x-compoje:
+      from: app.db_password
 
 configs:
   nginx_cfg:

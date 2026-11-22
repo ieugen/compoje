@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [0.2.0] - 2026-11-22
 
 ### Added
+- Docker secrets and configs from memory: a top-level secret/config definition with `x-compoje: {from: <context path>}` or `x-compoje: {template: <file>}` is created by compoje (`docker secret|config create NAME -`, content on stdin, name `<stack>_<key>-<sha256 prefix>` unless set, labelled with the stack) and passed to docker as external. Secret values no longer need to be written to disk. The ansible-vault and file examples use it; `local-path` is now legacy.
 - `render` command: `bb compoje render [-o FILE] <stack-file>` prints the rendered stack to stdout (or writes it to a file), for debugging and piping.
 - `deploy --show-secrets`: with `--dry-run`, show provider results in the printed context (redacted by default).
 - Distribution: `compoje --version` (from `resources/compoje/VERSION`), bbin support (`:bbin/bin` in bb.edn), `bb build-jar` builds `target/compoje.jar` (runs with only bb). GitHub Actions: CI on every push, and a release workflow that publishes `compoje.jar` on `vX.Y.Z` tags. See docs/install.md and docs/releasing.md.

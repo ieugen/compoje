@@ -1,5 +1,8 @@
 (ns unit.compoje.cli-test
   (:require [babashka.fs :as fs]
+            [cheshire.core]
+            [clojure.string :as str]
+            [compoje.render]
             [clojure.test :refer [deftest is testing]]
             [compoje.cli :as cli]
             [compoje.deploy.docker :as docker]
@@ -104,3 +107,30 @@
 (deftest compose-file-ignored-test
   (is (nil? (get-in (cli/deploy-context {:stack-file nginx :set ["docker.compose-file=/tmp/x.yml"]})
                     [:docker :compose-file]))))
+
+(deftest prepare-stack-test
+  (cli/register-default-providers!)
+  (testing "stacks without x-compoje definitions pass through unchanged"
+    (is (= ["services: {}\n" []] (cli/prepare-stack {} "services: {}\n"))))
+  (testing "managed secrets and configs are created by compoje and externalized"
+    (let [stack-file "example-stacks/file/stack.tpl.yml"
+          ctx (cli/deploy-context {:stack-file stack-file})
+          [_ctx contents] [ctx (compoje.render/render stack-file ctx {})]
+          [text objects] (cli/prepare-stack ctx contents)
+          sent (cheshire.core/parse-string text)]
+      (is (= [[:secret "api_token" "demo-only-not-a-real-token\n"]
+              [:config "app_conf" true]]
+             (map (fn [{:keys [kind key data]}]
+                    [kind key (if (= :config kind) (str/includes? data "region = eu-central") data)])
+                  objects)))
+      (is (every? #(re-matches #"file-example_(api_token|app_conf)-[0-9a-f]{10}" (:name %)) objects))
+      (is (= {"external" true "name" (:name (first objects))} (get-in sent ["secrets" "api_token"])))
+      (is (= {"external" true "name" (:name (second objects))} (get-in sent ["configs" "app_conf"])))
+      (testing "the secret value is not in what docker gets"
+        (is (not (str/includes? text "demo-only-not-a-real-token")))))))
+
+(deftest object-create-args-test
+  (is (= ["docker" "--context" "c" "secret" "create" "--label" "a=1" "--label" "b=2" "pw-1" "-"]
+         (docker/object-create-args {:context "c"} {:kind :secret :name "pw-1" :labels {"b" "2" "a" "1"}})))
+  (is (= ["docker" "config" "create" "c-1" "-"]
+         (docker/object-create-args {} {:kind :config :name "c-1" :labels {}}))))

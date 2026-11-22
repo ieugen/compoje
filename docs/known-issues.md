@@ -24,7 +24,9 @@ Likely fix: render the file that was passed, since config and template now live 
 Found 2026-11-21.
 
 `compoje.providers/secret->file!` writes decrypted secrets to `local-path` on every run, including `--dry-run`
-(there is a TODO in the code). Both the vault and ansible-vault providers use it.
+(there is a TODO in the code). All built-in providers use it. `local-path` is now legacy: `x-compoje.from` secrets
+need no files. Not skipped on dry-run, because stacks using `local-path` usually `file-hash` the written file, and
+the render would fail without it.
 
 ## `example01.yml` fixture has no known password
 

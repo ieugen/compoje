@@ -32,7 +32,9 @@ Deploys a stack file (a compose file with an `x-compoje:` section, see [configur
 1. Reads the `x-compoje:` section of `<stack-file>`, applies `--set` overrides and the docker flags below.
 2. Runs the secret providers for every declared secret ([providers.md](providers.md)).
 3. Renders the template with the result ([templates.md](templates.md)).
-4. Runs `docker stack deploy` with the rendered stack on stdin, from the stack file's directory (so relative
+4. Creates the [in-memory secrets and configs](configuration.md#secrets-and-configs-from-memory) that don't exist
+   yet.
+5. Runs `docker stack deploy` with the rendered stack on stdin, from the stack file's directory (so relative
    `file:` paths work). The rendered stack is not written to disk; use [`render`](#render) to see or save it.
 
 | Flag | Meaning |
@@ -56,8 +58,9 @@ Notes:
 
 - The rendered template is always `stack.tpl.yml` in the stack file's directory, whatever file name you pass
   ([known issue](known-issues.md#deploy-always-renders-stacktplyml)). Keep the name `stack.tpl.yml`.
-- `--dry-run` still runs the providers, and providers with `local-path` still write their files
-  ([known issue](known-issues.md#provider-local-path-files-are-written-on---dry-run)).
+- `--dry-run` still runs the providers, and providers with the legacy `local-path` still write their files
+  ([known issue](known-issues.md#provider-local-path-files-are-written-on---dry-run)). It lists the in-memory
+  secrets and configs it would create, without their content.
 - The rendered stack (stdout of `--dry-run`) contains every value the template uses, secrets included.
 - Logs go to stderr and data to stdout, so `bb compoje deploy --dry-run x.yml > out.yml` saves just the stack.
 

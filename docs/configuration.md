@@ -89,6 +89,62 @@ x-compoje:
 
 Any other key under `x-compoje:` is kept too, and is available in the template under its own name.
 
+## Secrets and configs from memory
+
+Docker reads secrets and configs from files: `file: secret.txt`. To avoid writing secret values to disk, give a
+top-level secret or config definition an `x-compoje:` key instead. compoje then creates the object itself, from
+memory:
+
+```yaml
+secrets:
+  db_password:
+    x-compoje:
+      from: app.db_password        # a value from the context, e.g. a provider result
+  tls_key:
+    x-compoje:
+      from: tls.key                # multi-line values (keys, certificates) work as they are
+
+configs:
+  app_conf:
+    x-compoje:
+      template: config/app.conf    # a file rendered with the context, like the stack file
+```
+
+| Key | Meaning |
+|---|---|
+| `from` | A dotted path in the [rendering context](#the-rendering-context): `app.db_password` is key `db_password` of secret `app`. Strings are used as they are; numbers and booleans become strings; maps and lists are an error. |
+| `template` | A template file, relative to the stack directory, rendered with the same context and syntax as the stack ([templates.md](templates.md)). Mostly for configs. |
+
+Give exactly one of them, and don't combine `x-compoje` with `file` or `external`.
+
+What compoje does on `deploy`:
+
+1. Builds the content in memory.
+2. Names the object: the definition's `name` if set, else
+   `<stack>_<key>-<first 10 hex digits of the content's SHA-256>`, e.g.
+   `ansible-vault-example_db_password-fb3ecca4eb`. Like docker stack's own `<stack>_<key>` names, so
+   `docker secret ls` shows which stack and definition an object belongs to. Docker allows at most 64 characters;
+   a longer generated name is an error, so set a shorter `name` then. Changing the value gives a new name, so the deploy succeeds even though Docker
+   objects can't change.
+3. Creates it unless an object with that name exists, with `docker secret|config create NAME -` (content on stdin)
+   and the labels `com.docker.stack.namespace=<stack>` and `com.docker.stack.managed-by=compoje`, plus the
+   definition's `labels`.
+4. Passes the definition to docker as `{external: true, name: ...}`.
+
+Services use these definitions like any others (`secrets: [db_password]`). `docker stack rm` also removes them,
+because of the namespace label. Old versions stay behind after a redeploy, as with `file-hash` names; remove them
+with `docker secret ls -q --filter label=com.docker.stack.managed-by=compoje | xargs docker secret rm` (in-use ones are
+refused).
+
+Things to know:
+
+- The hash in the name is derived from the content. For short, guessable secrets (a 4-digit PIN), 40 bits of
+  SHA-256 can be brute-forced. Set an explicit `name` (e.g. `db_password-v3`) and change it yourself when the value
+  changes.
+- `--dry-run` lists the objects it would create, with their sizes, never their content.
+- A stack with such definitions is parsed after rendering and sent to docker as JSON. YAML 1.2 rules apply: write
+  `true`/`false`, not `yes`/`no`.
+
 ## Precedence
 
 Settings are merged from these sources. Later ones win:

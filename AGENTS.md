@@ -24,6 +24,7 @@ Integration tests need a running Docker daemon (testcontainers): test/integratio
 - context.clj: builds the render context (`:values`, `:secrets`, `:work-dir`, `:template-dir`, `:docker`).
 - providers.clj: `SecretsProvider` protocol + registry atom, `provide-secrets` (results keyed by keyword secret name), shared `secret->file!`. providers/vault.clj (HashiCorp Vault), providers/ansible_vault.clj (glue for the ansible-vault library), providers/file.clj (plain yaml/json/edn/raw files). Path helpers `expand-home`/`resolve-path` live in providers.clj.
 - src/ansible_vault/ (`ansible-vault.core`, `.crypto`, `.yamlstar`): standalone ansible-vault format library (decrypt + encrypt). It must not require any compoje namespace; it is meant to be extracted. See docs/ansible-vault.md.
+- stack.clj: pure handling of managed (in-memory) secrets/configs: top-level definitions with `x-compoje: {from|template}` → `managed-objects` + `externalize`; `cli/prepare-stack` wires it in, `deploy/docker` creates them via `docker secret|config create NAME -`.
 - render.clj: Selmer rendering plus custom tags `file-hash`, `file-path`, `to-yaml` and the filter `hash-file`.
 - deploy/docker.clj: builds and shells out to the `docker stack deploy` command line.
 - utils.clj: `deep-merge`, `set-args->map`, misc.

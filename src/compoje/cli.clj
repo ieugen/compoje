@@ -1,6 +1,7 @@
 (ns compoje.cli
   "Command line interface for compoje, built on lambdaisland/cli."
   (:require [babashka.fs :as fs]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [compoje.config :as config]
@@ -13,10 +14,12 @@
             [compoje.providers.file :as file-p]
             [compoje.providers.vault :as vault-p]
             [compoje.render :as render]
+            [compoje.stack :as stack]
             [compoje.utils :as u]
             [lambdaisland.cli :as cli]
             [lambdaisland.cli.cmdspec :as cmdspec]
-            [taoensso.timbre :as log])
+            [taoensso.timbre :as log]
+            [yamlstar.core :as yaml])
   (:gen-class))
 
 (defn verbosity->log-level
@@ -103,6 +106,22 @@
     (log/trace "Context" context)
     [context (render/render template-file context {})]))
 
+(defn prepare-stack
+  "Split the rendered stack into what docker gets and the managed objects
+   (x-compoje secrets/configs) compoje creates itself. Returns
+   [stack-for-docker objects]. Stacks without managed objects pass through as
+   text; others are parsed, externalized and sent as JSON (valid YAML)."
+  [{:keys [template-dir docker] :as context} contents]
+  (if-not (stack/uses-managed-objects? contents)
+    [contents []]
+    (let [parsed (yaml/load contents)
+          objects (stack/managed-objects
+                   parsed
+                   {:context context
+                    :stack-name (:stack docker)
+                    :render-template #(render/render (str (fs/file template-dir %)) context {})})]
+      [(json/generate-string (stack/externalize parsed objects)) objects])))
+
 (defn- printable-context [context show-secrets]
   (u/pprint-str (cond-> context (not show-secrets) context/redact-secrets)))
 
@@ -138,13 +157,17 @@
     (when (str/blank? (some-> (:stack docker) str))
       (throw (ex-info "No stack name. Set x-compoje docker.stack in the stack file, or pass --stack."
                       {:stack-file (:stack-file opts)})))
-    (if dry-run
-      (do
-        (log/info (docker/deploy-str docker))
-        (log/info (printable-context context show-secrets))
-        (print contents)
-        (flush))
-      (docker/deploy docker contents template-dir)))
+    (let [[stack-text objects] (prepare-stack context contents)]
+      (if dry-run
+        (do
+          (docker/create-objects! docker objects true)
+          (log/info (docker/deploy-str docker))
+          (log/info (printable-context context show-secrets))
+          (print contents)
+          (flush))
+        (do
+          (docker/create-objects! docker objects false)
+          (docker/deploy docker stack-text template-dir)))))
   ::done)
 
 (defn render
