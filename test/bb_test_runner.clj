@@ -1,5 +1,6 @@
 (ns bb-test-runner
   (:require
+   [bb.deps-why-test]
    [bb.install-test]
    [clojure.test :as t]
    [unit.ansible-vault.core-test]
@@ -17,6 +18,7 @@
 (def test-namespaces
   "Tests that must pass in Babashka (the production runtime)."
   ['unit.rct-test
+   'bb.deps-why-test
    'bb.install-test
    'unit.ansible-vault.core-test
    'unit.ansible-vault.yamlstar-test

@@ -83,6 +83,28 @@ Not reported by antq (already current): kaocha 1.91.1392, clj-test-containers 0.
 NVD_API_KEY=... bb vuln-scan          # e.g. with the key in your shell profile or a password manager
 ```
 
+### Investigating a finding
+
+1. **Who pulls it in?** `bb deps-why <group/artifact>` prints the path from deps.edn down to the library for every
+   alias, and the jars that embed a shaded copy. A finding marked "Impossible to find dependency in tree" is usually
+   such an embedded copy.
+2. **Does it apply?** The NVD scan matches by CPE product name, so a CVE for another implementation can match (e.g.
+   the Ruby or Python `msgpack` for the Java msgpack-core). Read the CVE on nvd.nist.gov (description and CPE) and
+   cross-check the GitHub Advisory Database (`bb vuln-scan --github`, or
+   `https://github.com/advisories?query=<group>:<artifact>`).
+3. **Fix it** when possible: upgrade the dependency, or pin a fixed version of the transitive one in deps.edn, one
+   step at a time like any other update.
+4. **Otherwise suppress it** in `dependency-check-suppressions.xml` (used by the NVD mode through
+   `clj-watson.properties`):
+   - a proven false positive: permanently, with the evidence in `<notes>`;
+   - a real but unreachable finding without a fix (test or dev tooling only): with `until="<date>Z"`, so the scan
+     fails again and someone re-checks; also add it to docs/known-issues.md;
+   - match precisely (package URL with the version, plus CVE ids), so new findings aren't hidden;
+   - never suppress a runtime dependency (deps.edn `:deps`) without a plan to fix it.
+
+The fix-suggestion step (`-s`) may try `git clone`s of repositories that don't exist; the task disables git's
+credential prompt so this can't hang.
+
 CI runs it weekly, on demand and when deps.edn or bb.edn change (.github/workflows/vulnerabilities.yml). Add the
 key as the repository secret `NVD_API_KEY` (Settings → Secrets and variables → Actions) to use NVD there; without
 it CI uses the GitHub Advisory Database. A finding is fixed like any other update: one dependency per step, tracked

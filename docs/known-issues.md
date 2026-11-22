@@ -81,6 +81,20 @@ Found 2026-11-22.
 `compoje.providers.vault` calls `System/exit -1` when a secret can't be read, or when there is no address, instead of
 throwing. This skips the normal error reporting and makes it hard to test.
 
+## testcontainers bundles vulnerable httpclient5 / httpcore5 (test-only)
+
+Found 2026-11-22 by `bb vuln-scan` (NVD).
+
+`com.github.docker-java/docker-java-transport-zerodep` 3.7.1, pulled in by `org.testcontainers/testcontainers` 2.0.5
+(aliases `:dev`, `:test`), embeds shaded copies of httpclient5 5.5.1 (CVE-2026-71290, CVE-2026-64607) and
+httpcore5 / httpcore5-h2 5.3.6 (CVE-2026-54399, CVE-2026-54428). Shaded code can't be overridden, and both are the
+latest releases. It is used only by the integration tests, against the local Docker daemon; it is not part of
+compoje's runtime, bb or the release jar.
+
+Suppressed in dependency-check-suppressions.xml **until 2027-02-22**. Then: check for newer testcontainers /
+docker-java-transport-zerodep (`bb deps-why org.apache.httpcomponents.client5/httpclient5` shows the embedded
+versions), upgrade if fixed, else extend the date with a note.
+
 ## yamlstar 0.1.23 limitations
 
 These come from the YAML library, not compoje code, and are already documented in AGENTS.md and CHANGELOG.md:

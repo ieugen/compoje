@@ -10,12 +10,15 @@
          fmt {:doc "Format code using cljfmt"
               :extra-deps {dev.weavejester/cljfmt {:mvn/version "0.16.6"}}
               :requires ([cljfmt.main :as fmt])
-              :task (apply fmt/-main *command-line-args*)}
+              ;; `bb fmt check|fix` covers src, test, script and install.clj; extra args pick other paths
+              :task (apply fmt/-main (if (next *command-line-args*)
+                                       *command-line-args*
+                                       (concat *command-line-args* ["src" "test" "script" "install.clj"])))}
          lint {:doc "Lint: clj-kondo (as a pod, all code incl. install.clj) and clojure-lsp diagnostics. Fails on findings."
                :task (do (babashka.pods/load-pod 'clj-kondo/clj-kondo "2026.10.26")
                          (let [run! (requiring-resolve 'pod.borkdude.clj-kondo/run!)
                                print! (requiring-resolve 'pod.borkdude.clj-kondo/print!)
-                               {:keys [summary] :as result} (run! {:lint ["src" "test" "install.clj"]})]
+                               {:keys [summary] :as result} (run! {:lint ["src" "test" "script" "install.clj"]})]
                            (print! result)
                            (when (pos? (+ (:error summary) (:warning summary)))
                              (System/exit 1)))
@@ -23,6 +26,10 @@
                          (if (babashka.fs/which "clojure-lsp")
                            (shell "clojure-lsp diagnostics")
                            (clojure "-M:lsp diagnostics")))}
+         deps-why {:doc "Why is a library on the classpath? bb deps-why <group/artifact>: dependency paths per deps.edn alias, and jars that embed (shade) it."
+                   :extra-paths ["script"]
+                   :requires ([deps-why])
+                   :task (deps-why/run (first *command-line-args*))}
          vuln-scan {:doc "Scan deps.edn dependencies (all aliases) for known vulnerabilities with clj-watson. With an NVD API key (NVD_API_KEY or CLJ_WATSON_NVD_API_KEY) uses the NVD database (dependency-check), else the GitHub Advisory Database (GITHUB_TOKEN). Force one with --nvd / --github."
                     :task (let [args (set *command-line-args*)
                                 env (fn [k] (not-empty (System/getenv k)))
@@ -31,27 +38,29 @@
                                                (args "--nvd") :nvd
                                                nvd-key :nvd
                                                :else :github)
-                                scan "-M:clj-watson scan -p deps.edn -a '*' -s -f"]
+                                scan "-M:clj-watson scan -p deps.edn -a '*' -s -f"
+                                ;; fix suggestions (-s) may try git clones of non-existent repos; fail fast, don't prompt
+                                no-git-prompt {"GIT_TERMINAL_PROMPT" "0"}]
                             (case strategy
                               :nvd (do (when-not nvd-key
                                          (println "Set NVD_API_KEY (https://nvd.nist.gov/developers/request-an-api-key).")
                                          (System/exit 1))
                                        (println "Scanning with the NVD database (the first run downloads it, several minutes) ...")
                                        ;; the key goes through the environment, never the command line
-                                       (clojure {:extra-env {"CLJ_WATSON_NVD_API_KEY" nvd-key}}
-                                                (str scan " -t dependency-check")))
+                                       (clojure {:extra-env (assoc no-git-prompt "CLJ_WATSON_NVD_API_KEY" nvd-key) :in ""}
+                                                (str scan " -t dependency-check -w clj-watson.properties")))
                               :github (do (when-not (env "GITHUB_TOKEN")
                                             (println "Set NVD_API_KEY for the NVD database, or GITHUB_TOKEN (a GitHub token; no scopes needed) for the GitHub Advisory Database.")
                                             (System/exit 1))
                                           (println "Scanning with the GitHub Advisory Database ...")
-                                          (clojure (str scan " -t github-advisory")))))}
+                                          (clojure {:extra-env no-git-prompt :in ""} (str scan " -t github-advisory")))))}
          vault-dev {:doc "Start vault in dev mode for REPL exploring."
                     :task (shell "vault server -dev -dev-root-token-id=myroot")}
          test-bb {:doc "Run Babashka tests"
                   :extra-deps {org.babashka/spec.alpha {:git/url "https://github.com/babashka/spec.alpha"
                                                         :git/sha "b6eb0f2208ab036c0a5d0e7235cb0b09d2feabb7"}
                                io.github.matthewdowney/rich-comment-tests {:mvn/version "v1.0.5"}}
-                  :extra-paths ["src" "test"]
+                  :extra-paths ["src" "test" "script"]
                   :task bb-test-runner/run-tests}
          ;; not named uberjar: a task would shadow bb's built-in uberjar command
          build-jar {:doc "Build target/compoje.jar, runnable with: bb target/compoje.jar"

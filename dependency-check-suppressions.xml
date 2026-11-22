@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Suppressions for `bb vuln-scan` with the NVD database (clj-watson / OWASP dependency-check).
+  Rules (see docs/dependency-updates.md, "Vulnerability scanning"):
+  - A proven false positive may be suppressed permanently; say why in <notes>.
+  - A real finding may only be suppressed with an `until` date, when it can't be reached and has no fix yet.
+    When the date passes the scan fails again: re-check, then fix, extend or remove.
+  - Match precisely (package URL with version, plus the CVE ids), so new findings are not hidden.
+  Trace a dependency with `bb deps-why <group/artifact>`.
+-->
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+  <suppress>
+    <notes><![CDATA[
+      False positive (CPE name match). These CVEs are for other MessagePack implementations, not the Java
+      library org.msgpack/msgpack-core:
+        CVE-2026-54522: MessagePack for Ruby (cpe:2.3:a:msgpack:messagepack:*:*:*:*:*:ruby:*:*)
+        CVE-2026-57585: msgpack for Python (cpe:2.3:a:msgpack:messagepack:*:*:*:*:*:python:*:*)
+      The GitHub Advisory Database lists neither for the Java library.
+      Pulled in by transit-java, via djblue/portal (:dev) and clojure-lsp-standalone (:lsp); dev tools only.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.msgpack/msgpack-core@.*$</packageUrl>
+    <cve>CVE-2026-54522</cve>
+    <cve>CVE-2026-57585</cve>
+  </suppress>
+
+  <suppress until="2027-02-22Z">
+    <notes><![CDATA[
+      Real, test-only, no fix available yet. httpclient5 5.5.1 is shaded inside
+      com.github.docker-java/docker-java-transport-zerodep 3.7.1, pulled in by org.testcontainers/testcontainers
+      2.0.5 (aliases :dev and :test). Both are the latest releases (checked 2026-11-22), and shaded classes can't be
+      overridden with a newer httpclient5. testcontainers only talks to the local Docker daemon during tests; it is
+      not part of compoje's runtime, bb or the release jar.
+      Re-check by the date: newer testcontainers / docker-java-transport-zerodep? See docs/known-issues.md.
+    ]]></notes>
+    <packageUrl>pkg:maven/org.apache.httpcomponents.client5/httpclient5@5.5.1</packageUrl>
+    <cve>CVE-2026-71290</cve>
+    <cve>CVE-2026-64607</cve>
+  </suppress>
+
+  <suppress until="2027-02-22Z">
+    <notes><![CDATA[
+      Real, test-only, no fix available yet. httpcore5 and httpcore5-h2 5.3.6 are shaded inside
+      docker-java-transport-zerodep 3.7.1
+      (testcontainers 2.0.5, aliases :dev and :test); see the httpclient5 entry above. The CVEs are HTTP/2 HPACK
+      denial-of-service bugs; the Docker API is HTTP/1.1 to the local daemon.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.core5/httpcore5(-h2)?@5\.3\.6$</packageUrl>
+    <cve>CVE-2026-54399</cve>
+    <cve>CVE-2026-54428</cve>
+  </suppress>
+
+</suppressions>
