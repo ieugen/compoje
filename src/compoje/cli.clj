@@ -187,22 +187,46 @@
           (log/warn "Wrote" output "- it can contain secret values; don't commit it."))))
   ::done)
 
-(defn migrate
-  "Migrate a stack directory from compoje.edn to x-compoje.
+(defn- migrate-report
+  "Human-readable lines about a migrate! result."
+  [{:keys [file changed edn converted skipped plaintext-files]} dry-run]
+  (concat
+   (when edn ["compoje.edn: config moved into the x-compoje section."])
+   (for [{:keys [secret from defs dropped-keys]} converted]
+     (str "Secret " secret ": " (str/join ", " (map #(str/join "." %) defs))
+          " now created from memory (x-compoje from: " from "); local-path removed."
+          (when (seq dropped-keys) (str " Dropped keys: " (str/join ", " dropped-keys) "."))))
+   (for [{:keys [secret local-path reason]} skipped]
+     (str "Skipped secret " secret " (local-path " local-path "): " reason))
+   (for [f plaintext-files]
+     (str "Plaintext secret file " f " is no longer needed: delete it after a successful deploy."))
+   [(cond
+      (not changed) "Nothing to migrate."
+      dry-run (str "Dry run: " file " not written.")
+      :else (str "Migrated " file ". Review it"
+                 (when edn " and delete compoje.edn") "."))]))
 
-  Reads <dir>/compoje.edn and adds its config to <dir>/stack.tpl.yml as an
-  x-compoje: section. compoje.edn is left in place: review the result, then
-  delete it. Fails if compoje.edn uses aero tags (#env, #or, ...), or if the
-  template already has an x-compoje section."
-  {:flags ["--dry-run" {:doc "Print the migrated stack.tpl.yml. Do not write it."
+(defn migrate
+  "Migrate a stack directory to the current stack format.
+
+  Two steps, each when it applies:
+  - compoje.edn → x-compoje: adds compoje.edn's config to <dir>/stack.tpl.yml
+    as an x-compoje: section (compoje.edn is left in place; delete it after
+    reviewing). Fails if compoje.edn uses aero tags (#env, #or, ...).
+  - local-path secrets → Docker secrets created from memory: definitions with
+    `file: <local-path>` become `x-compoje: {from: ...}` and local-path /
+    spit-key are removed, so secrets are no longer written to disk. Secrets
+    that can't be converted safely are left as they are and reported."
+  {:flags ["--dry-run" {:doc "Print the migrated stack.tpl.yml (stdout) and the report (stderr). Do not write."
                         :value true}]}
   [{:keys [dir dry-run verbosity]}]
   (set-hooman-logging! verbosity)
   (let [result (migrate/migrate! dir {:dry-run dry-run})]
-    (if dry-run
-      (print result)
-      (log/info "Migrated" result "- review it, then delete"
-                (str (fs/file dir "compoje.edn")))))
+    (when dry-run
+      (print (:text result))
+      (flush))
+    (doseq [line (migrate-report result dry-run)]
+      (log/info line)))
   ::done)
 
 (defn version

@@ -103,13 +103,17 @@ with `--output` when you are done.
 bb compoje migrate [--dry-run] <dir>
 ```
 
-Converts a stack directory in the old layout (`stack.tpl.yml` + `compoje.edn`): the contents of `compoje.edn`
-become an `x-compoje:` section at the top of `stack.tpl.yml`. `compoje.edn` is left in place. Stops when
-`compoje.edn` uses aero tags (`#env`, `#or`, ...) or the template is already migrated.
+Upgrades a stack directory to the current format. Two steps, each when it applies:
+
+1. **`compoje.edn` → `x-compoje:`**: the contents of `compoje.edn` become an `x-compoje:` section at the top of
+   `stack.tpl.yml`. `compoje.edn` is left in place. Stops when `compoje.edn` uses aero tags (`#env`, `#or`, ...).
+2. **Secrets written to files → secrets from memory**: definitions that read a provider's `local-path` file become
+   `x-compoje: {from: ...}`, so secrets are no longer written to disk. Secrets that can't be converted safely are
+   left as they are and reported.
 
 | Flag | Meaning |
 |---|---|
-| `--dry-run` | Print the migrated `stack.tpl.yml`. Do not write it. |
+| `--dry-run` | Print the migrated `stack.tpl.yml` (stdout) and the report (stderr). Do not write it. |
 
 Details in [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md).
 

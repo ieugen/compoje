@@ -1,0 +1,6 @@
+{:docker {:stack "edn-secrets"}
+ :providers [{:name :vault :type :compoje.providers.vault/vault :addr "http://localhost:8200"}]
+ :secrets [{:name "nginx" :provider :vault :mount-path "secret" :secret-path "nginx"
+            :local-path "generated/cert.key" :spit-key :cert.key}
+           {:name "db" :provider :vault :mount-path "secret" :secret-path "db"
+            :local-path "generated/db.txt" :spit-key :password}]}

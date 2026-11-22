@@ -9,6 +9,7 @@
             [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
+            [compoje.migrate-secrets :as migrate-secrets]
             [yamlstar.core :as yaml]))
 
 (defn read-edn-config
@@ -116,34 +117,57 @@
                      "provider, for values that differ per environment), then run migrate again."])))
 
 (defn migrate!
-  "Migrate directory `dir`: add compoje.edn's config to <dir>/stack.tpl.yml as an
-   x-compoje: section. compoje.edn is not touched.
+  "Migrate stack directory `dir` (<dir>/stack.tpl.yml). Two steps, each when
+   it applies:
 
-   With :dry-run, return the new template text without writing it.
-   Otherwise overwrite stack.tpl.yml and return its path.
-   Throws ex-info when files are missing, compoje.edn has aero tags, or the
-   template already has an x-compoje section."
+   1. compoje.edn → x-compoje: compoje.edn's config is added to the template
+      as an x-compoje: section (compoje.edn itself is not touched). Fails on
+      aero tags, or when the template already has x-compoje.
+   2. local-path secrets → in-memory Docker secrets, see
+      compoje.migrate-secrets. Secrets that can't be converted safely are
+      left as they are and reported.
+
+   Returns {:file :text :changed :edn :converted :skipped :plaintext-files}.
+   Writes stack.tpl.yml only when something changed and not :dry-run."
   [dir {:keys [dry-run]}]
   (let [template-file (fs/file dir "stack.tpl.yml")
         edn-file (fs/file dir "compoje.edn")]
     (when-not (fs/directory? dir)
       (throw (ex-info (str "Not a directory: " dir) {:dir (str dir)})))
-    (doseq [f [template-file edn-file]]
-      (when-not (fs/exists? f)
-        (throw (ex-info (str "Missing " f) {:dir (str dir)}))))
+    (when-not (fs/exists? template-file)
+      (throw (ex-info (str "Missing " template-file) {:dir (str dir)})))
     (let [template (slurp template-file)
-          config (read-edn-config (slurp edn-file))
-          tags (find-tags config)]
-      (when (seq tags)
-        (throw (ex-info (tags-message tags) {:file (str edn-file)})))
-      (when-not (map? config)
-        (throw (ex-info (str edn-file " does not contain a map") {:file (str edn-file)})))
-      (when (has-compoje-key? template)
-        (throw (ex-info (str template-file " already has an x-compoje section. Nothing to migrate.") {:file (str template-file)})))
-      (let [result (migrate-template template config)]
-        (if dry-run
-          result
-          (do
-            (spit template-file result)
-            (log/debug "Wrote" (str template-file))
-            (str template-file)))))))
+          edn? (fs/exists? edn-file)
+          text (if edn?
+                 (let [config (read-edn-config (slurp edn-file))
+                       tags (find-tags config)]
+                   (when (seq tags)
+                     (throw (ex-info (tags-message tags) {:file (str edn-file)})))
+                   (when-not (map? config)
+                     (throw (ex-info (str edn-file " does not contain a map") {:file (str edn-file)})))
+                   (when (has-compoje-key? template)
+                     (throw (ex-info (str template-file " already has an x-compoje section, and " edn-file
+                                          " exists too. Merge them by hand, or delete compoje.edn.")
+                                     {:file (str template-file)})))
+                   (migrate-template template config))
+                 (if (has-compoje-key? template)
+                   template
+                   (throw (ex-info (str "Nothing to migrate: " edn-file " is missing and "
+                                        template-file " has no x-compoje section.")
+                                   {:dir (str dir)}))))
+          {:keys [text converted skipped]} (migrate-secrets/convert text)
+          plaintext (vec (for [{:keys [local-path]} converted
+                               :let [f (fs/file dir local-path)]
+                               :when (fs/exists? f)]
+                           (str f)))
+          changed (not= template text)]
+      (when (and changed (not dry-run))
+        (spit template-file text)
+        (log/debug "Wrote" (str template-file)))
+      {:file (str template-file)
+       :text text
+       :changed changed
+       :edn edn?
+       :converted converted
+       :skipped skipped
+       :plaintext-files plaintext})))

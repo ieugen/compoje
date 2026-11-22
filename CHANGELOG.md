@@ -5,13 +5,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-
-## [0.2.0] - 2026-11-22
-
 ### Added
 - Docker secrets and configs from memory: a top-level secret/config definition with `x-compoje: {from: <context path>}` or `x-compoje: {template: <file>}` is created by compoje (`docker secret|config create NAME -`, content on stdin, name `<stack>_<key>-<sha256 prefix>` unless set, labelled with the stack) and passed to docker as external. Secret values no longer need to be written to disk. The ansible-vault and file examples use it; `local-path` is now legacy.
 - `render` command: `bb compoje render [-o FILE] <stack-file>` prints the rendered stack to stdout (or writes it to a file), for debugging and piping.
 - `deploy --show-secrets`: with `--dry-run`, show provider results in the printed context (redacted by default).
+
+### Changed
+- **Breaking:** `deploy` no longer writes `stack.generated.yml`. The rendered stack, which can contain secret values, goes to `docker stack deploy --compose-file -` on stdin (run in the stack's directory so relative `file:` paths work). The `x-compoje docker.compose-file` setting is ignored with a warning; use `render -o FILE` to save the stack.
+- `deploy --dry-run` prints provider results as `<redacted>` in the context, writes logs to stderr and the rendered stack to stdout.
+- Logs go to stderr; stdout carries only data (the rendered stack).
+- `migrate` converts provider secrets written to files (`local-path` used by a `file:` secret/config definition) into Docker secrets created from memory (`x-compoje: {from: ...}`), and also works on stacks that already use `x-compoje` (no `compoje.edn`). Secrets it can't convert safely are left as they are and reported.
+
+## [0.2.0] - 2026-11-22
+
+### Added
 - Distribution: `compoje --version` (from `resources/compoje/VERSION`), bbin support (`:bbin/bin` in bb.edn), `bb build-jar` builds `target/compoje.jar` (runs with only bb). GitHub Actions: CI on every push, and a release workflow that publishes `compoje.jar` on `vX.Y.Z` tags. See docs/install.md and docs/releasing.md.
 - File provider (`compoje.providers.file/file`): loads plain YAML, JSON, EDN or text files (format from the extension), with optional `dir`, `local-path` and `spit-key`. See docs/providers.md and `example-stacks/file/`.
 - Reference documentation in docs/: cli.md, configuration.md, templates.md, providers.md (including custom providers), indexed in docs/README.md.
@@ -26,9 +33,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - More documentation in docs/docs.org; AGENTS.md / CLAUDE.md for coding agents.
 
 ### Changed
-- **Breaking:** `deploy` no longer writes `stack.generated.yml`. The rendered stack, which can contain secret values, goes to `docker stack deploy --compose-file -` on stdin (run in the stack's directory so relative `file:` paths work). The `x-compoje docker.compose-file` setting is ignored with a warning; use `render -o FILE` to save the stack.
-- `deploy --dry-run` prints provider results as `<redacted>` in the context, writes logs to stderr and the rendered stack to stdout.
-- Logs go to stderr; stdout carries only data (the rendered stack).
 - The CLI is built on [lambdaisland/cli](https://github.com/lambdaisland/cli) instead of tools.cli: generated help for every command (`bb compoje deploy --help`), strict flag checking, `--[no-]with-registry-auth` (registry auth could not be turned off before), `--deploy-driver DRIVER` takes a value, and usage errors still exit 1. `--set` overrides are repeatable as before. The JVM can run `clojure -M -m compoje.cli`.
 - YAML is parsed and generated with [yamlstar](https://github.com/yaml/yamlstar) (YAML 1.2) instead of clj-yaml (YAML 1.1). Values like `yes`, `no`, `on`, `off` now stay strings instead of becoming booleans. Known yamlstar 0.1.23 limitations: `to-yaml` adds a trailing newline to multi-line strings that lack one, and custom YAML tags are rejected.
 - Configuration lives in the stack template itself, under a top-level `x-compoje:` key (docker, providers, secrets, values), and is read as YAML. The separate `compoje.edn` file is no longer used.

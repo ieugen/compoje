@@ -1,0 +1,2 @@
+# Test-only keys and certificates for compoje.docker.tls tests. Never use them elsewhere.
+# Regenerate: see test/unit/compoje/docker/tls_test.clj

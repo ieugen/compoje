@@ -99,7 +99,7 @@ Things that need to be done:
 - [x] Install / run via bbin ?!
 - [x] Instruction on how to install and run via bb, clojure, clojure tools
 - [ ] Validate configuration, cli args? using spec / malli
-- [ ] Implement docker driver via contajners - avoid needing docker client
+- [-] Implement docker driver via contajners - avoid needing docker client
 - [X] Write some documentation and examples - once features are stable
 - [x] Implement functions to convert context values -> yaml structure like in helm
 - [ ] Implement stack initialization with compoje.edn + other files

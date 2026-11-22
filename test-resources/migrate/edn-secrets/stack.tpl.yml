@@ -1,0 +1,12 @@
+services:
+  web:
+    image: docker.io/nginx:stable
+    secrets: [cert_key, db_password]
+
+secrets:
+  cert_key:
+    file: generated/cert.key
+    name: cert_key-<% file-hash 'generated/cert.key' %>
+  db_password:
+    file: generated/db.txt
+    name: db_password-<% file-hash 'generated/db.txt' %>

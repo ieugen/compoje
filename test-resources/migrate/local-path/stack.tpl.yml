@@ -1,0 +1,51 @@
+x-compoje:
+  docker:
+    stack: lp
+  providers:
+    - name: demo-vault
+      type: compoje.providers.ansible-vault/ansible-vault
+      password-file: vault-password.txt
+    - name: files
+      type: compoje.providers.file/file
+  secrets:
+    # whole file encrypted with `ansible-vault encrypt`
+    - name: app
+      provider: demo-vault
+      file: secrets/app.vault.yml
+      # write one decrypted value to a file, used as a docker secret below
+      local-path: generated/db_password.txt
+      spit-key: db_password
+    # a raw token file, copied for a docker secret
+    - name: token
+      provider: files
+      file: secrets/token.txt
+      local-path: ./generated/token.txt
+    # also mounted with file-path below: must be skipped
+    - name: cert
+      provider: files
+      file: secrets/cert.pem
+      local-path: generated/cert.pem
+
+services:
+  app:
+    image: docker.io/nginx:stable
+    environment:
+      DB_USER: <{ app.db_user }>
+    volumes:
+      - <% file-path 'generated/cert.pem' %>:/etc/cert.pem:ro
+    secrets:
+      - db_password
+      - token
+      - cert
+
+secrets:
+  db_password:
+    file: generated/db_password.txt
+    name: db_password-<% file-hash 'generated/db_password.txt' %>
+  token:
+    file: generated/token.txt
+    name: token-v1
+    labels:
+      team: ops
+  cert:
+    file: generated/cert.pem

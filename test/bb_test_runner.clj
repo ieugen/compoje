@@ -3,6 +3,9 @@
    [clojure.test :as t]
    [unit.ansible-vault.core-test]
    [unit.ansible-vault.yamlstar-test]
+   [unit.compoje.docker.client-test]
+   [unit.compoje.docker.endpoint-test]
+   [unit.compoje.docker.tls-test]
    [unit.compoje.migrate-test]
    [unit.compoje.providers.ansible-vault-test]
    [unit.compoje.providers.file-test]
@@ -13,6 +16,9 @@
   ['unit.rct-test
    'unit.ansible-vault.core-test
    'unit.ansible-vault.yamlstar-test
+   'unit.compoje.docker.client-test
+   'unit.compoje.docker.endpoint-test
+   'unit.compoje.docker.tls-test
    'unit.compoje.migrate-test
    'unit.compoje.providers.ansible-vault-test
    'unit.compoje.providers.file-test])
