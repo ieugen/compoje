@@ -63,7 +63,7 @@ The `docker-api` engine finds the daemon like the docker CLI does (`context`, `D
 current context in `~/.docker/config.json`, the local socket) and reads your contexts from `~/.docker/contexts`, so
 `ssh://` and TLS contexts keep working. It produces the same services, networks, secrets and configs as
 `docker stack deploy` for the compose keys it supports. Unsupported keys are an error that lists them all; use
-`docker-cli` for those stacks.
+`docker-cli` for those stacks. See [engines.md](engines.md).
 
 ### `providers`
 

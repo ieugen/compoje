@@ -238,4 +238,6 @@ One of them: compoje always renders the file named `stack.tpl.yml` next to the f
 - [ansible-vault.md](ansible-vault.md): secrets from ansible-vault
 - [cli.md](cli.md), [configuration.md](configuration.md), [templates.md](templates.md),
   [providers.md](providers.md): the full reference
+- [engines.md](engines.md): deploy without the docker CLI
+- [security.md](security.md): keeping secrets off disk and out of logs
 - [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md): upgrading stacks that still use `compoje.edn`
