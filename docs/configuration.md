@@ -96,7 +96,34 @@ x-compoje:
         memory: 50M
 ```
 
-Any other key under `x-compoje:` is kept too, and is available in the template under its own name.
+Any other key under `x-compoje:` is kept too, and is available in the template under its own name. compoje warns
+about it (with a "did you mean" when it looks like a typo of `docker`, `providers`, `secrets` or `values`).
+
+## Validation
+
+`deploy` and `render` check the `x-compoje` section, after `--set`, before doing anything else. All problems are
+reported at once:
+
+```console
+$ bb compoje deploy --dry-run stack.tpl.yml
+[FATAL] Invalid x-compoje configuration in stack.tpl.yml:
+  docker.prune: should be a boolean
+  docker.stak: unknown key; did you mean stack?
+  secrets[0].name: values would overwrite the context key of the same name; choose another name
+  secrets[0].provider: unknown provider file (providers: files)
+```
+
+What is checked:
+
+- `docker`: only the keys in the table above, with their types and allowed values.
+- `providers`: `name` and `type` are required. For the built-in providers, only their own settings are allowed
+  ([providers.md](providers.md)); custom provider types may have any keys.
+- `secrets`: `name` and `provider` are required, and the provider must be declared. For built-in providers, the
+  secret's settings are checked (e.g. `file` is required for the file and ansible-vault providers).
+- Names are unique, and a secret may not be named like a context key (`docker`, `providers`, `secrets`, `values`,
+  `template-dir`, `config-file`, `work-dir`): its result would replace that key in the template.
+- `--set` values are strings; where a boolean is expected, `true`/`false` are converted, so
+  `--set docker.prune=false` really turns pruning off.
 
 ## Secrets and configs from memory
 

@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Validation of the `x-compoje` configuration (malli) in `deploy` and `render`: unknown or mistyped keys with "did you mean", allowed values, required provider/secret settings for the built-in providers, undeclared providers, duplicate names, secret names that would overwrite context keys. All problems are reported at once. See docs/configuration.md, "Validation".
 - `init` command: `bb compoje init [--stack NAME] [--force] <dir>` scaffolds a stack directory (stack.tpl.yml with an x-compoje section, an nginx service with an in-memory templated config, html/index.html, .gitignore). See docs/cli.md.
 - Template filters `yaml-str` (quote and escape a value for YAML, including `$`) and `escape-dollar` (`$` → `$$`), so secret values survive YAML and docker's variable substitution unchanged. See docs/templates.md, "Escaping values".
 - Development: `bb lint` (clj-kondo + clojure-lsp diagnostics, run in CI) and `bb vuln-scan` (clj-watson: NVD database with an NVD API key, else the GitHub Advisory Database; weekly CI workflow), with `dependency-check-suppressions.xml` for reviewed findings, and `bb deps-why <group/artifact>` to see which dependency pulls a library in (including shaded copies inside other jars). `bb fmt` now also covers `script/` and `install.clj`.
@@ -25,6 +26,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Removed
 - The unused `compose-spec/compose-spec.json` schema.
+
+### Fixed
+- `--set docker.prune=false` (and other booleans set with `--set`) enabled the option, because `--set` values are strings and "false" is truthy. Booleans are now converted.
+- A secret named like a context key (`values`, `docker`, ...) silently replaced that key in the template; it is now an error.
 
 ## [0.2.0] - 2026-11-22
 

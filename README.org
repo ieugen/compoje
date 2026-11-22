@@ -80,8 +80,6 @@ See the [[file:docs/quick-start.md][quick start guide]] for a full walk-through,
 
 Still to do, in order (details in [[file:docs/known-issues.md][docs/known-issues.md]] where noted):
 
-- [ ] Validate the =x-compoje= configuration with malli: unknown keys, missing provider references, secret names that
-  clash with context keys
 - [ ] Deprecate the provider =local-path= option (it writes secrets to disk); =compoje migrate= already converts it
 - [ ] Known issues: render the stack file that was passed instead of always =stack.tpl.yml=; the HashiCorp Vault
   provider should throw instead of exiting the process
@@ -90,6 +88,8 @@ Done or dropped:
 
 - Render, dry run, deploy, =--set= values, HashiCorp Vault, ansible-vault and file providers, documentation and
   examples, the =to-yaml= tag, installation via bb, bbin and a one-line installer.
+- Validating the =x-compoje= configuration (malli): unknown keys with "did you mean", provider references, reserved
+  secret names ([[file:docs/configuration.md][docs/configuration.md]]).
 - Scaffolding a new stack: =compoje init <dir>= ([[file:docs/cli.md][docs/cli.md]]); replaces the old "stack
   initialization with compoje.edn" item.
 - Escaping secret values in templates: the =escape-dollar= and =yaml-str= filters

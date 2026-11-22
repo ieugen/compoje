@@ -35,14 +35,6 @@ Found 2026-11-21.
 `test-resources/ansible_vault/example01.yml` (inline `!vault`, label `dev`) does not decrypt with
 `password01.txt`, and its password is not in the repository. No test uses it. Add its password file or remove it.
 
-## Secret names can overwrite context keys
-
-Found 2026-11-22.
-
-Provider results are deep-merged into the top level of the render context under the secret's `name`
-(`compoje.context/final-context`). A secret named `values`, `docker` or `secrets` merges into, or replaces, that
-context key. Possible fixes: reject reserved names, or put results under their own key.
-
 ## `to-yaml` tag: no nested paths, no indentation
 
 Found 2026-11-22.

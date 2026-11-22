@@ -41,7 +41,7 @@ Keys that every secret entry has:
 
 | Key | Meaning |
 |---|---|
-| `name` | Name of the result in the template context. Required. Use a name that is not already a context key (`docker`, `values`, `secrets`, ...); see [known-issues.md](known-issues.md). |
+| `name` | Name of the result in the template context. Required. It may not be a context key (`docker`, `values`, `secrets`, ...); this is [checked](configuration.md#validation). |
 | `provider` | The `name` of a provider. Required. |
 | `local-path` | Legacy, optional. Also write the secret **in plain text** to this file, relative to the stack directory. Prefer [in-memory Docker secrets](#docker-secrets-without-files). |
 | `spit-key` | Optional, with `local-path`. Write only this key of the result, not all of it. |

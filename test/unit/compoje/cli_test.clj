@@ -133,3 +133,24 @@
          (docker/object-create-args {:context "c"} {:kind :secret :name "pw-1" :labels {"b" "2" "a" "1"}})))
   (is (= ["docker" "config" "create" "c-1" "-"]
          (docker/object-create-args {} {:kind :config :name "c-1" :labels {}}))))
+
+(deftest config-validation
+  (let [dir (fs/create-temp-dir)
+        stack (fs/path dir "stack.tpl.yml")]
+    (try
+      (testing "errors are listed together, with did-you-mean"
+        (spit (str stack) "x-compoje:\n  docker:\n    stak: web\n    resolve-image: sometimes\nservices: {}\n")
+        (let [msg (try (cli/cli-config->context (str stack) []) nil
+                       (catch clojure.lang.ExceptionInfo e (ex-message e)))]
+          (is (str/includes? msg "Invalid x-compoje configuration"))
+          (is (str/includes? msg "docker.stak: unknown key; did you mean stack?"))
+          (is (str/includes? msg "docker.resolve-image: should be either"))))
+      (testing "--set strings become booleans: --set docker.prune=false does not prune"
+        (spit (str stack) "x-compoje:\n  docker:\n    stack: web\nservices: {}\n")
+        (let [docker (:docker (cli/cli-config->context (str stack) ["docker.prune=false"]))]
+          (is (false? (:prune docker)))
+          (is (not (some #{"--prune"} (docker/deploy-args docker))))))
+      (testing "unknown top-level keys only warn and are kept"
+        (spit (str stack) "x-compoje:\n  docker:\n    stack: web\n  extra:\n    a: 1\nservices: {}\n")
+        (is (= {:a 1} (:extra (cli/cli-config->context (str stack) [])))))
+      (finally (fs/delete-tree dir)))))

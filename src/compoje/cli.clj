@@ -18,6 +18,7 @@
             [compoje.providers.file :as file-p]
             [compoje.providers.vault :as vault-p]
             [compoje.render :as render]
+            [compoje.schema :as schema]
             [compoje.stack :as stack]
             [compoje.utils :as u]
             [lambdaisland.cli :as cli]
@@ -67,6 +68,20 @@
         (filter (comp some? val))
         (select-keys opts docker-cli-keys)))
 
+(defn validated-config
+  "Validate the x-compoje config (after --set) of `config-file`: log warnings,
+   throw on errors listing them all. Returns the config with --set strings
+   coerced where the schema wants booleans."
+  [config-file config]
+  (let [{:keys [config errors warnings]} (schema/validate config)]
+    (doseq [w warnings] (log/warn (str config-file ": " w)))
+    (when (seq errors)
+      (throw (ex-info (str "Invalid x-compoje configuration in " config-file ":\n  "
+                           (str/join "\n  " errors)
+                           "\nSee docs/configuration.md.")
+                      {:file (str config-file)})))
+    config))
+
 (defn cli-config->context
   "Build the context for a stack file.
 
@@ -77,7 +92,7 @@
   ([config-file set-args cli-docker]
    (let [config-file (fs/file config-file)
          template-dir (config/config-name->template-dir config-file)
-         config (config/load-config! config-file set-args)
+         config (validated-config config-file (config/load-config! config-file set-args))
          config (merge-with merge
                             {:docker docker-defaults}
                             config
