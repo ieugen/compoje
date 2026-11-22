@@ -154,3 +154,12 @@
         (spit (str stack) "x-compoje:\n  docker:\n    stack: web\n  extra:\n    a: 1\nservices: {}\n")
         (is (= {:a 1} (:extra (cli/cli-config->context (str stack) [])))))
       (finally (fs/delete-tree dir)))))
+
+(deftest renders-the-passed-file
+  (testing "a stack file with another name is rendered itself (no stack.tpl.yml next to it)"
+    (let [dir (fs/create-temp-dir)
+          f (fs/path dir "web.yml")]
+      (try
+        (spit (str f) "x-compoje:\n  docker:\n    stack: web\n  values:\n    n: 3\nservices:\n  a:\n    image: i\n    deploy:\n      replicas: <{ values.n }>\n")
+        (is (str/includes? (with-out-str (cli/render {:stack-file (str f) :verbosity 0})) "replicas: 3"))
+        (finally (fs/delete-tree dir))))))

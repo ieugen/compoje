@@ -159,7 +159,8 @@ Secret settings:
 The result is the secret's key/value map: `<{ nginx.username }>`, or `from: nginx.username` for a Docker secret.
 Keys that contain dots, like `cert.key`, can't be used in a path; name your Vault keys without dots (`cert_key`).
 
-If a secret can't be read, compoje logs the error and exits with a non-zero code.
+If a secret can't be read, the deploy stops with an error naming the secret and Vault's message, e.g.
+`HashiCorp Vault secret nginx (secret/web/nginx): No kv-v2 secret found at secret:web/nginx`.
 
 ## File
 

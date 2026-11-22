@@ -28,12 +28,11 @@
                            (System/getenv "VAULT_APP_SECRET_ID"))
          app-role? (and (some? app-role-id)
                         (some? app-secret-id))
+         _ (when-not addr
+             (throw (ex-info "HashiCorp Vault provider: no server address. Set addr in the provider, or $VAULT_ADDR."
+                             {})))
          client (vault/new-client addr)
          state (atom {})]
-     (when-not addr
-       (log/error "Missing vault server address. It's required.
-                   Pass value or set $VAULT_ADDR")
-       (System/exit 1))
      (if app-role?
        (let [client (approle/login client :app-role
                                    {:role-id app-role-id
@@ -66,21 +65,17 @@
   providers/SecretsProvider
   (run [_this context]
     (log/trace "Provide secrets for" context)
-    (try
-      (let [{:keys [config secret-spec template-dir]} context
-            client (authenticated-client config)
-            secret (read-kvv2! client secret-spec)]
-        (providers/secret->file! template-dir secret))
-      (catch Exception e
-        (let [{:keys [type error status]} (ex-data e)]
-          (if (= type :vault.client.api-util/api-error)
-            (do
-              (log/error "Exception reading secret: " error
-                         ". Status:" status)
-              (System/exit -1))
-            (do
-              (log/error "Exception reading secret" e)
-              (System/exit -1)))))))
+    (let [{:keys [config secret-spec template-dir]} context
+          {:keys [name mount-path secret-path]} secret-spec]
+      (try
+        (let [client (authenticated-client config)
+              secret (read-kvv2! client secret-spec)]
+          (providers/secret->file! template-dir secret))
+        (catch Exception e
+          ;; vault-clj's message already has the path, HTTP status and Vault's errors
+          (throw (ex-info (str "HashiCorp Vault secret " name " (" mount-path "/" secret-path "): " (ex-message e))
+                          {:secret name :status (:vault.client/status (ex-data e))}
+                          e))))))
   (provider-name [_this] ::vault))
 
 (comment

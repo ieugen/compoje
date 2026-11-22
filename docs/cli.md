@@ -56,8 +56,8 @@ docker [--context CTX] stack deploy [--with-registry-auth] --resolve-image alway
 
 Notes:
 
-- The rendered template is always `stack.tpl.yml` in the stack file's directory, whatever file name you pass
-  ([known issue](known-issues.md#deploy-always-renders-stacktplyml)). Keep the name `stack.tpl.yml`.
+- The stack file you pass is the template that is rendered; its name doesn't matter (`stack.tpl.yml` is the
+  convention). Paths in it are relative to its directory.
 - `--dry-run` still runs the providers, and providers with the legacy `local-path` still write their files
   ([known issue](known-issues.md#provider-local-path-files-are-written-on---dry-run)). It lists the in-memory
   secrets and configs it would create, without their content.
@@ -145,6 +145,5 @@ Details in [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md).
 |---|---|
 | 0 | The command finished, or help was shown. |
 | 1 | Usage errors (no command, unknown command, missing argument; help is printed), unknown flags, and errors while running, printed as `[FATAL] message` followed by details. |
-| other | A failing `docker stack deploy` exits 1; the HashiCorp Vault provider exits -1 (255) when it can't read a secret. |
 
 Common messages are listed in [quick-start.md](quick-start.md#troubleshooting).

@@ -28,6 +28,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The unused `compose-spec/compose-spec.json` schema.
 
 ### Fixed
+- `deploy` and `render` rendered `stack.tpl.yml` next to the given file instead of the given file itself; any stack file name works now.
+- The HashiCorp Vault provider exited the process (`System/exit`) on errors; it now raises an error naming the secret and Vault's message, reported like other errors.
 - `--set docker.prune=false` (and other booleans set with `--set`) enabled the option, because `--set` values are strings and "false" is truthy. Booleans are now converted.
 - A secret named like a context key (`values`, `docker`, ...) silently replaced that key in the template; it is now an error.
 

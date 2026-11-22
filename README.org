@@ -80,9 +80,8 @@ See the [[file:docs/quick-start.md][quick start guide]] for a full walk-through,
 
 Still to do, in order (details in [[file:docs/known-issues.md][docs/known-issues.md]] where noted):
 
-- [ ] Deprecate the provider =local-path= option (it writes secrets to disk); =compoje migrate= already converts it
-- [ ] Known issues: render the stack file that was passed instead of always =stack.tpl.yml=; the HashiCorp Vault
-  provider should throw instead of exiting the process
+- [ ] Deprecate the provider =local-path= option (it writes secrets to disk); =compoje migrate= already converts it.
+  Deferred.
 
 Done or dropped:
 
@@ -90,6 +89,8 @@ Done or dropped:
   examples, the =to-yaml= tag, installation via bb, bbin and a one-line installer.
 - Validating the =x-compoje= configuration (malli): unknown keys with "did you mean", provider references, reserved
   secret names ([[file:docs/configuration.md][docs/configuration.md]]).
+- Known issues fixed: the stack file that is passed is the one rendered (not always =stack.tpl.yml=); the HashiCorp
+  Vault provider reports errors instead of exiting the process.
 - Scaffolding a new stack: =compoje init <dir>= ([[file:docs/cli.md][docs/cli.md]]); replaces the old "stack
   initialization with compoje.edn" item.
 - Escaping secret values in templates: the =escape-dollar= and =yaml-str= filters

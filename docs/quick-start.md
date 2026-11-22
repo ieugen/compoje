@@ -242,7 +242,6 @@ docker swarm leave --force   # only if you created the swarm just for this guide
 | `[FATAL] .../stack.tpl.yml (No such file or directory)` | Wrong path to the stack file; paths are relative to where you run `bb`. |
 
 Use `-v` (or `-vv`) for debug output, and see [known-issues.md](known-issues.md) for known limitations.
-One of them: compoje always renders the file named `stack.tpl.yml` next to the file you pass, so keep that name.
 
 ## Next steps
 

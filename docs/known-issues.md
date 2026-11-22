@@ -3,22 +3,6 @@
 Open problems that were found but deliberately left for later review.
 When one is fixed, remove it here and add a line to CHANGELOG.md under `[Unreleased] → Fixed`.
 
-## `deploy` always renders `stack.tpl.yml`
-
-Found 2026-11-21.
-
-`compoje.cli/deploy` (src/compoje/cli.clj) reads the `x-compoje:` config from the file given on the command line,
-but always renders `<template-dir>/stack.tpl.yml`:
-
-```clojure
-template-file (str (fs/file template-dir "stack.tpl.yml"))
-```
-
-So `bb compoje deploy path/to/other.yml` loads `other.yml`'s config but renders the sibling `stack.tpl.yml`,
-or fails if there is none.
-
-Likely fix: render the file that was passed, since config and template now live in the same file.
-
 ## Provider `local-path` files are written on `--dry-run`
 
 Found 2026-11-21.
@@ -65,13 +49,6 @@ Found 2026-11-22.
 
 `bb compoje deploy --help` prints `Positional arguments missing: <stack-file>` before the help text
 (lambdaisland/cli behaviour).
-
-## HashiCorp Vault provider exits the process
-
-Found 2026-11-22.
-
-`compoje.providers.vault` calls `System/exit -1` when a secret can't be read, or when there is no address, instead of
-throwing. This skips the normal error reporting and makes it hard to test.
 
 ## testcontainers bundles vulnerable httpclient5 / httpcore5 (test-only)
 

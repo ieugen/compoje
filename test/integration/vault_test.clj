@@ -101,7 +101,27 @@
                                      :mount-path "secret"
                                      :secret-path "secret-foo"}}
               result (providers/run v context)]
-          (is (= result {:a "b"})))))))
+          (is (= result {:a "b"}))))))
+
+  (testing "A missing secret is an error naming the secret (no System/exit)\n"
+    (with-vault
+      (fn [container]
+        (let [v (vp/->VaultSecretsProvider)
+              e (try (providers/run v {:config (container->vault-config container)
+                                       :template-dir "."
+                                       :secret-spec {:name "nope" :mount-path "secret" :secret-path "no-such"}})
+                     nil
+                     (catch clojure.lang.ExceptionInfo e e))]
+          (is (= "HashiCorp Vault secret nope (secret/no-such): No kv-v2 secret found at secret:no-such"
+                 (ex-message e)))
+          (is (= "nope" (:secret (ex-data e))))))))
+
+  (testing "No server address is an error\n"
+    (when-not (System/getenv "VAULT_ADDR")
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"no server address"
+                            (providers/run (vp/->VaultSecretsProvider)
+                                           {:config {:token "t"} :template-dir "."
+                                            :secret-spec {:name "x" :mount-path "m" :secret-path "p"}}))))))
 
 (comment
   (run-all-tests #"providers.vault-test"))

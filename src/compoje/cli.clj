@@ -120,7 +120,8 @@
   (register-default-providers!)
   (log/debug "Providers are" (providers/registered-providers))
   (let [context (deploy-context opts)
-        template-file (str (fs/file (:template-dir context) "stack.tpl.yml"))]
+        ;; the stack file is the template: render the file that was passed
+        template-file (str (:config-file context))]
     (log/trace "Context" context)
     [context (render/render template-file context {})]))
 
