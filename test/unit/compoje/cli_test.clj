@@ -22,7 +22,6 @@
 (deftest parse-test
   (testing "global and deploy flags"
     (is (= {:verbosity 2
-            :deploy-driver :docker
             :stack-file "f.yml"
             :dry-run true
             :prune true
@@ -36,11 +35,11 @@
                   "-s" "a.b=1" "--set" "c=2" "f.yml"))))
 
   (testing "defaults"
-    (is (= {:verbosity 0 :deploy-driver :docker :stack-file "f.yml"}
+    (is (= {:verbosity 0 :stack-file "f.yml"}
            (parse "deploy" "f.yml"))))
 
   (testing "migrate"
-    (is (= {:command :migrate :verbosity 0 :deploy-driver :docker :dir "stacks/nginx" :dry-run true}
+    (is (= {:command :migrate :verbosity 0 :dir "stacks/nginx" :dry-run true}
            (parse "migrate" "--dry-run" "stacks/nginx"))))
 
   (testing "unknown flags are rejected (strict)"
@@ -111,7 +110,7 @@
 (deftest prepare-stack-test
   (cli/register-default-providers!)
   (testing "stacks without x-compoje definitions pass through unchanged"
-    (is (= ["services: {}\n" []] (cli/prepare-stack {} "services: {}\n"))))
+    (is (= ["services: {}\n" [] nil] (cli/prepare-stack {} "services: {}\n"))))
   (testing "managed secrets and configs are created by compoje and externalized"
     (let [stack-file "example-stacks/file/stack.tpl.yml"
           ctx (cli/deploy-context {:stack-file stack-file})

@@ -1,0 +1,317 @@
+{
+  "networks" : [ {
+    "name" : "ref_back",
+    "external" : false,
+    "spec" : {
+      "Name" : "ref_back",
+      "Driver" : "overlay",
+      "Labels" : {
+        "com.docker.stack.namespace" : "ref"
+      },
+      "CheckDuplicate" : true,
+      "Options" : {
+        "encrypted" : ""
+      },
+      "Internal" : true,
+      "IPAM" : {
+        "Config" : [ {
+          "Subnet" : "10.99.0.0/24"
+        } ]
+      }
+    }
+  }, {
+    "name" : "ref_default",
+    "external" : false,
+    "spec" : {
+      "Name" : "ref_default",
+      "Driver" : "overlay",
+      "Labels" : {
+        "com.docker.stack.namespace" : "ref"
+      },
+      "CheckDuplicate" : true
+    }
+  }, {
+    "name" : "ref_front",
+    "external" : false,
+    "spec" : {
+      "Name" : "ref_front",
+      "Driver" : "overlay",
+      "Labels" : {
+        "com.example.net" : "front",
+        "com.docker.stack.namespace" : "ref"
+      },
+      "CheckDuplicate" : true,
+      "Attachable" : true
+    }
+  } ],
+  "secrets" : [ {
+    "key" : "app_secret",
+    "name" : "ref_app_secret_v1",
+    "external" : false,
+    "file" : "config/secret.txt",
+    "labels" : {
+      "com.docker.stack.namespace" : "ref"
+    }
+  } ],
+  "configs" : [ {
+    "key" : "app_conf",
+    "name" : "ref_app_conf",
+    "external" : false,
+    "file" : "config/app.conf",
+    "labels" : {
+      "com.example.cfg" : "app",
+      "com.docker.stack.namespace" : "ref"
+    }
+  } ],
+  "services" : [ {
+    "name" : "ref_web",
+    "spec" : {
+      "Name" : "ref_web",
+      "Labels" : {
+        "com.example.service" : "web",
+        "com.docker.stack.namespace" : "ref",
+        "com.docker.stack.image" : "docker.io/nginx:stable"
+      },
+      "TaskTemplate" : {
+        "ContainerSpec" : {
+          "Init" : true,
+          "Hosts" : [ "10.0.0.10 db.local" ],
+          "OpenStdin" : true,
+          "Sysctls" : {
+            "net.core.somaxconn" : "1024"
+          },
+          "Env" : [ "A=1", "B=2", "FROM_FILE=1", "SHARED=env" ],
+          "TTY" : true,
+          "User" : "101",
+          "CapabilityDrop" : [ "CAP_MKNOD" ],
+          "Hostname" : "{{.Node.Hostname}}-web",
+          "Args" : [ "nginx", "-g", "daemon off;" ],
+          "StopGracePeriod" : 90000000000,
+          "Mounts" : [ {
+            "Type" : "volume",
+            "Source" : "ref_data",
+            "Target" : "/data",
+            "VolumeOptions" : {
+              "Labels" : {
+                "com.example.vol" : "data",
+                "com.docker.stack.namespace" : "ref"
+              },
+              "DriverConfig" : {
+                "Name" : "local"
+              }
+            }
+          }, {
+            "Type" : "bind",
+            "Source" : "/stack/config",
+            "Target" : "/cfg",
+            "ReadOnly" : true
+          }, {
+            "Type" : "tmpfs",
+            "Target" : "/tmp/cache",
+            "TmpfsOptions" : {
+              "SizeBytes" : 1048576
+            }
+          }, {
+            "Type" : "volume",
+            "Source" : "ref_data",
+            "Target" : "/data2",
+            "VolumeOptions" : {
+              "NoCopy" : true,
+              "Labels" : {
+                "com.example.vol" : "data",
+                "com.docker.stack.namespace" : "ref"
+              },
+              "DriverConfig" : {
+                "Name" : "local"
+              }
+            }
+          } ],
+          "Privileges" : {
+            "CredentialSpec" : null,
+            "SELinuxContext" : null,
+            "NoNewPrivileges" : false
+          },
+          "Labels" : {
+            "com.example.container" : "web",
+            "com.docker.stack.namespace" : "ref"
+          },
+          "Command" : [ "/docker-entrypoint.sh" ],
+          "Healthcheck" : {
+            "Test" : [ "CMD", "curl", "-f", "http://localhost" ],
+            "Interval" : 30000000000,
+            "Timeout" : 10000000000,
+            "StartPeriod" : 5000000000,
+            "Retries" : 3
+          },
+          "Ulimits" : [ {
+            "Name" : "nofile",
+            "Hard" : 2048,
+            "Soft" : 1024
+          }, {
+            "Name" : "nproc",
+            "Hard" : 512,
+            "Soft" : 512
+          } ],
+          "CapabilityAdd" : [ "CAP_NET_ADMIN" ],
+          "Image" : "nginx:stable",
+          "Dir" : "/usr/share/nginx",
+          "DNSConfig" : {
+            "Nameservers" : [ "1.1.1.1" ],
+            "Search" : [ "example.com" ]
+          },
+          "StopSignal" : "SIGQUIT"
+        },
+        "Networks" : [ {
+          "Target" : "ref_back",
+          "Aliases" : [ "web" ]
+        }, {
+          "Target" : "ref_front",
+          "Aliases" : [ "www", "web" ]
+        } ],
+        "Resources" : {
+          "Limits" : {
+            "NanoCPUs" : 500000000,
+            "MemoryBytes" : 268435456,
+            "Pids" : 100
+          },
+          "Reservations" : {
+            "NanoCPUs" : 250000000,
+            "MemoryBytes" : 67108864
+          }
+        },
+        "RestartPolicy" : {
+          "Condition" : "on-failure",
+          "Delay" : 5000000000,
+          "MaxAttempts" : 3,
+          "Window" : 120000000000
+        },
+        "Placement" : {
+          "Constraints" : [ "node.role == manager" ],
+          "Preferences" : [ {
+            "Spread" : {
+              "SpreadDescriptor" : "node.labels.zone"
+            }
+          } ],
+          "MaxReplicas" : 2
+        },
+        "LogDriver" : {
+          "Name" : "json-file",
+          "Options" : {
+            "max-size" : "10m"
+          }
+        }
+      },
+      "Mode" : {
+        "Replicated" : {
+          "Replicas" : 0
+        }
+      },
+      "UpdateConfig" : {
+        "Parallelism" : 2,
+        "Delay" : 10000000000,
+        "FailureAction" : "rollback",
+        "Monitor" : 30000000000,
+        "MaxFailureRatio" : 0.1,
+        "Order" : "start-first"
+      },
+      "RollbackConfig" : {
+        "Parallelism" : 1,
+        "Delay" : 0,
+        "FailureAction" : "pause",
+        "Monitor" : 0,
+        "MaxFailureRatio" : 0.0,
+        "Order" : "stop-first"
+      },
+      "EndpointSpec" : {
+        "Mode" : "vip",
+        "Ports" : [ {
+          "Protocol" : "tcp",
+          "TargetPort" : 80,
+          "PublishMode" : "ingress",
+          "PublishedPort" : 8081
+        }, {
+          "Protocol" : "tcp",
+          "TargetPort" : 443,
+          "PublishMode" : "host",
+          "PublishedPort" : 8443
+        }, {
+          "Protocol" : "udp",
+          "TargetPort" : 9000,
+          "PublishMode" : "ingress",
+          "PublishedPort" : 9000
+        }, {
+          "Protocol" : "udp",
+          "TargetPort" : 9001,
+          "PublishMode" : "ingress",
+          "PublishedPort" : 9001
+        } ]
+      }
+    },
+    "secret-refs" : [ {
+      "key" : "app_secret",
+      "target" : "app_secret_file",
+      "uid" : "101",
+      "gid" : "101",
+      "mode" : 256
+    }, {
+      "key" : "app_secret",
+      "target" : "app_secret",
+      "uid" : "0",
+      "gid" : "0",
+      "mode" : 292
+    } ],
+    "config-refs" : [ {
+      "key" : "app_conf",
+      "target" : "/etc/nginx/conf.d/default.conf",
+      "uid" : "0",
+      "gid" : "0",
+      "mode" : 288
+    }, {
+      "key" : "app_conf",
+      "target" : "app_conf",
+      "uid" : "0",
+      "gid" : "0",
+      "mode" : 292
+    } ]
+  }, {
+    "name" : "ref_worker",
+    "spec" : {
+      "Name" : "ref_worker",
+      "Labels" : {
+        "com.docker.stack.namespace" : "ref",
+        "com.docker.stack.image" : "docker.io/nginx:stable"
+      },
+      "TaskTemplate" : {
+        "ContainerSpec" : {
+          "Image" : "nginx:stable",
+          "Labels" : {
+            "com.docker.stack.namespace" : "ref"
+          },
+          "Privileges" : {
+            "CredentialSpec" : null,
+            "SELinuxContext" : null,
+            "NoNewPrivileges" : false
+          },
+          "Args" : [ "nginx", "-g", "daemon off;" ],
+          "Env" : [ "X=1", "Y=two words" ],
+          "Healthcheck" : {
+            "Test" : [ "NONE" ]
+          }
+        },
+        "Networks" : [ {
+          "Target" : "ref_default",
+          "Aliases" : [ "worker" ]
+        } ]
+      },
+      "Mode" : {
+        "Global" : { }
+      },
+      "EndpointSpec" : {
+        "Mode" : "dnsrr"
+      }
+    },
+    "secret-refs" : [ ],
+    "config-refs" : [ ]
+  } ],
+  "ignored" : [ ]
+}

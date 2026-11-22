@@ -6,7 +6,10 @@
             [clojure.string :as str]
             [compoje.config :as config]
             [compoje.context :as context]
+            [compoje.deploy.api :as api]
             [compoje.deploy.docker :as docker]
+            [compoje.deploy.swarm-convert :as swarm-convert]
+            [compoje.docker.endpoint :as endpoint]
             [compoje.logging :as clog]
             [compoje.migrate :as migrate]
             [compoje.providers :as providers]
@@ -18,8 +21,7 @@
             [compoje.utils :as u]
             [lambdaisland.cli :as cli]
             [lambdaisland.cli.cmdspec :as cmdspec]
-            [taoensso.timbre :as log]
-            [yamlstar.core :as yaml])
+            [taoensso.timbre :as log])
   (:gen-class))
 
 (defn verbosity->log-level
@@ -109,18 +111,55 @@
 (defn prepare-stack
   "Split the rendered stack into what docker gets and the managed objects
    (x-compoje secrets/configs) compoje creates itself. Returns
-   [stack-for-docker objects]. Stacks without managed objects pass through as
-   text; others are parsed, externalized and sent as JSON (valid YAML)."
+   [stack-for-docker objects parsed]: stacks without managed objects pass
+   through as text (parsed nil); others are parsed (YAML 1.1 octal ints, like
+   docker), externalized and sent as JSON (valid YAML)."
   [{:keys [template-dir docker] :as context} contents]
   (if-not (stack/uses-managed-objects? contents)
-    [contents []]
-    (let [parsed (yaml/load contents)
+    [contents [] nil]
+    (let [parsed (swarm-convert/parse-stack contents)
           objects (stack/managed-objects
                    parsed
                    {:context context
                     :stack-name (:stack docker)
-                    :render-template #(render/render (str (fs/file template-dir %)) context {})})]
-      [(json/generate-string (stack/externalize parsed objects)) objects])))
+                    :render-template #(render/render (str (fs/file template-dir %)) context {})})
+          externalized (stack/externalize parsed objects)]
+      [(json/generate-string externalized) objects externalized])))
+
+(defn deploy-driver
+  "Engine to deploy with: --deploy-driver, else x-compoje docker.driver, else
+   docker-cli. `docker` is an alias of docker-cli."
+  [flag context]
+  (let [d (some-> (or flag (get-in context [:docker :driver]) "docker-cli") name)]
+    (case d
+      ("docker" "docker-cli") :docker-cli
+      "docker-api" :docker-api
+      (throw (ex-info (str "Unsupported deploy driver: " d ". Supported: docker-cli (alias docker), docker-api.")
+                      {:deploy-driver d})))))
+
+^:rct/test
+(comment
+  (deploy-driver nil {}) ;=> :docker-cli
+  (deploy-driver :docker {:docker {:driver "docker-api"}}) ;=> :docker-cli
+  (deploy-driver nil {:docker {:driver "docker-api"}}) ;=> :docker-api
+  (try (deploy-driver "k8s" {}) (catch Exception e (ex-message e)))
+  ;=> "Unsupported deploy driver: k8s. Supported: docker-cli (alias docker), docker-api."
+  )
+
+(defn api-endpoint
+  "Docker endpoint for the docker-api engine: docker.context (or the usual
+   resolution) plus x-compoje docker.ssh-mode and docker.allow-insecure-tcp."
+  [{:keys [docker]}]
+  (cond-> (endpoint/resolve-endpoint {:context (:context docker)})
+    (:ssh-mode docker) (assoc :ssh-mode (keyword (name (:ssh-mode docker))))
+    (:allow-insecure-tcp docker) (assoc :allow-insecure-tcp true)))
+
+(defn- docker-client-config
+  "The docker client config.json ($DOCKER_CONFIG or ~/.docker), or {}."
+  []
+  (let [f (fs/path (endpoint/docker-config-dir (into {} (System/getenv)) (System/getProperty "user.home"))
+                   "config.json")]
+    (if (fs/exists? f) (json/parse-string (slurp (str f))) {})))
 
 (defn- printable-context [context show-secrets]
   (u/pprint-str (cond-> context (not show-secrets) context/redact-secrets)))
@@ -147,27 +186,35 @@
                               :value true}
                  "--show-secrets" {:doc "With --dry-run: show provider results in the printed context."
                                    :value true}])}
-  [{:keys [dry-run show-secrets deploy-driver] :as opts}]
-  (when-not (= :docker deploy-driver)
-    (throw (ex-info (str "Unsupported deploy driver: " (name deploy-driver)
-                         ". Supported: docker.")
-                    {:deploy-driver deploy-driver})))
+  [{:keys [dry-run show-secrets] :as opts}]
   (let [[context contents] (render-stack opts)
-        {:keys [template-dir docker]} context]
+        {:keys [template-dir docker]} context
+        driver (deploy-driver (:deploy-driver opts) context)]
     (when (str/blank? (some-> (:stack docker) str))
       (throw (ex-info "No stack name. Set x-compoje docker.stack in the stack file, or pass --stack."
                       {:stack-file (:stack-file opts)})))
-    (let [[stack-text objects] (prepare-stack context contents)]
-      (if dry-run
-        (do
-          (docker/create-objects! docker objects true)
-          (log/info (docker/deploy-str docker))
-          (log/info (printable-context context show-secrets))
-          (print contents)
-          (flush))
-        (do
-          (docker/create-objects! docker objects false)
-          (docker/deploy docker stack-text template-dir)))))
+    (let [[stack-text objects parsed] (prepare-stack context contents)]
+      (when dry-run
+        (log/info (printable-context context show-secrets))
+        (print contents)
+        (flush))
+      (case driver
+        :docker-cli
+        (if dry-run
+          (do (docker/create-objects! docker objects true)
+              (log/info (docker/deploy-str docker)))
+          (do (docker/create-objects! docker objects false)
+              (docker/deploy docker stack-text template-dir)))
+        :docker-api
+        (let [ep (api-endpoint context)]
+          (log/info "Deploy using the Docker API at" (:host-url ep) (when dry-run "(dry run)"))
+          (api/deploy! (or parsed (swarm-convert/parse-stack contents))
+                       {:endpoint ep
+                        :docker docker
+                        :objects objects
+                        :template-dir template-dir
+                        :docker-config (docker-client-config)
+                        :dry-run dry-run})))))
   ::done)
 
 (defn render
@@ -242,8 +289,7 @@
    :flags ["-v, --verbose" {:doc "Increase verbosity: -v debug, -vv trace."
                             :key :verbosity
                             :default 0}
-           "--deploy-driver DRIVER" {:doc "Deployment driver. Only docker is supported."
-                                     :default "docker"
+           "--deploy-driver DRIVER" {:doc "Deploy engine: docker-cli (default; alias docker) runs `docker stack deploy`, docker-api talks to the Docker API directly (no docker CLI needed). Overrides x-compoje docker.driver."
                                      :parse keyword}
            "--version" "Print the compoje version and exit."]
    :commands ["deploy <stack-file>" #'deploy

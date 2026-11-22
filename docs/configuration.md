@@ -55,6 +55,15 @@ Options for `docker stack deploy`.
 | `prune` | `false` | Remove services no longer in the stack. | `--prune` |
 | `resolve-image` | `always` | `always`, `changed` or `never`. | `--resolve-image` |
 | `with-registry-auth` | `true` | Send registry credentials to the swarm agents. | `--[no-]with-registry-auth` |
+| `driver` | `docker-cli` | Deploy engine: `docker-cli` runs `docker stack deploy`; `docker-api` uses the Docker API directly, without the docker CLI. | `--deploy-driver` |
+| `ssh-mode` | `dial-stdio` | `docker-api` with an `ssh://` endpoint: `dial-stdio` runs `docker system dial-stdio` on the remote host (like the docker CLI); `forward` forwards the remote socket instead (no remote docker binary needed). | none |
+| `allow-insecure-tcp` | `false` | `docker-api`: allow plain `tcp://` without TLS (unauthenticated root on the host; avoid). | none |
+
+The `docker-api` engine finds the daemon like the docker CLI does (`context`, `DOCKER_HOST`, `DOCKER_CONTEXT`, the
+current context in `~/.docker/config.json`, the local socket) and reads your contexts from `~/.docker/contexts`, so
+`ssh://` and TLS contexts keep working. It produces the same services, networks, secrets and configs as
+`docker stack deploy` for the compose keys it supports. Unsupported keys are an error that lists them all; use
+`docker-cli` for those stacks.
 
 ### `providers`
 

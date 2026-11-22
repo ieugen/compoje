@@ -1,0 +1,163 @@
+version: "3.9"
+services:
+  web:
+    image: docker.io/nginx:stable
+    command: ["nginx", "-g", "daemon off;"]
+    entrypoint: /docker-entrypoint.sh
+    environment:
+      B: "2"
+      A: "1"
+      SHARED: env
+    env_file: config/app.env
+    labels:
+      com.example.container: web
+    hostname: "{{.Node.Hostname}}-web"
+    user: "101"
+    working_dir: /usr/share/nginx
+    init: true
+    stop_grace_period: 1m30s
+    stop_signal: SIGQUIT
+    tty: true
+    stdin_open: true
+    read_only: false
+    extra_hosts:
+      - "db.local:10.0.0.10"
+    dns:
+      - 1.1.1.1
+    dns_search:
+      - example.com
+    cap_add: [NET_ADMIN]
+    cap_drop: [MKNOD]
+    sysctls:
+      net.core.somaxconn: "1024"
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 2048
+      nproc: 512
+    ports:
+      - "8081:80"
+      - target: 443
+        published: 8443
+        protocol: tcp
+        mode: host
+      - "9000-9001:9000-9001/udp"
+    networks:
+      front:
+        aliases: [www]
+      back: {}
+    configs:
+      - source: app_conf
+        target: /etc/nginx/conf.d/default.conf
+        mode: 0440
+      - app_conf
+    secrets:
+      - source: app_secret
+        target: app_secret_file
+        uid: "101"
+        gid: "101"
+        mode: 0400
+      - app_secret
+    volumes:
+      - data:/data
+      - ./config:/cfg:ro
+      - type: tmpfs
+        target: /tmp/cache
+        tmpfs:
+          size: 1048576
+      - type: volume
+        source: data
+        target: /data2
+        volume:
+          nocopy: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+    deploy:
+      mode: replicated
+      replicas: 0
+      endpoint_mode: vip
+      labels:
+        com.example.service: web
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+          pids: 100
+        reservations:
+          cpus: "0.25"
+          memory: 64m
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 2m
+      placement:
+        constraints: [node.role == manager]
+        preferences:
+          - spread: node.labels.zone
+        max_replicas_per_node: 2
+      update_config:
+        parallelism: 2
+        delay: 10s
+        failure_action: rollback
+        monitor: 30s
+        max_failure_ratio: 0.1
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 0s
+        failure_action: pause
+        monitor: 0s
+        max_failure_ratio: 0
+        order: stop-first
+  worker:
+    image: docker.io/nginx:stable
+    command: nginx -g 'daemon off;'
+    environment:
+      - X=1
+      - Y=two words
+    healthcheck:
+      disable: true
+    deploy:
+      mode: global
+      endpoint_mode: dnsrr
+
+networks:
+  front:
+    driver: overlay
+    attachable: true
+    labels:
+      com.example.net: front
+  back:
+    driver: overlay
+    internal: true
+    driver_opts:
+      encrypted: ""
+    ipam:
+      config:
+        - subnet: 10.99.0.0/24
+
+volumes:
+  data:
+    driver: local
+    labels:
+      com.example.vol: data
+
+configs:
+  app_conf:
+    file: config/app.conf
+    labels:
+      com.example.cfg: app
+
+secrets:
+  app_secret:
+    file: config/secret.txt
+    name: ref_app_secret_v1

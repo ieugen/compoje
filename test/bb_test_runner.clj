@@ -3,6 +3,8 @@
    [clojure.test :as t]
    [unit.ansible-vault.core-test]
    [unit.ansible-vault.yamlstar-test]
+   [unit.compoje.deploy.api-test]
+   [unit.compoje.deploy.swarm-convert-test]
    [unit.compoje.docker.client-test]
    [unit.compoje.docker.endpoint-test]
    [unit.compoje.docker.tls-test]
@@ -16,6 +18,8 @@
   ['unit.rct-test
    'unit.ansible-vault.core-test
    'unit.ansible-vault.yamlstar-test
+   'unit.compoje.deploy.api-test
+   'unit.compoje.deploy.swarm-convert-test
    'unit.compoje.docker.client-test
    'unit.compoje.docker.endpoint-test
    'unit.compoje.docker.tls-test

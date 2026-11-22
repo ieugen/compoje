@@ -50,7 +50,7 @@ NAME
   compoje  ——  Templates for docker swarm stacks.
 
 SYNOPSIS
-  compoje [-v | --verbose] [--deploy-driver DRIVER] [--version] [deploy | migrate] [<args>...]
+  compoje [-v | --verbose] [--deploy-driver DRIVER] [--version] [deploy | render | migrate] [<args>...]
 ...
 SUBCOMMANDS
   deploy <stack-file>   Deploy a stack template to a Docker Swarm cluster.

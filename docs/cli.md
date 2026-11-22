@@ -15,7 +15,7 @@ Commands: [`deploy`](#deploy), [`render`](#render) and [`migrate`](#migrate).
 | Flag | Meaning |
 |---|---|
 | `-v`, `--verbose` | More logging. `-v` is debug, `-vv` trace. Trace output can include secret values. |
-| `--deploy-driver DRIVER` | How to deploy. Only `docker` exists (the default). |
+| `--deploy-driver DRIVER` | Deploy engine. `docker-cli` (default, alias `docker`) runs `docker stack deploy`. `docker-api` talks to the Docker API directly, so no docker CLI is needed; it supports a [subset of compose keys](configuration.md#docker) and errors on the rest. Overrides `x-compoje docker.driver`. |
 | `-h`, `--help` | Show help. |
 
 Global flags can go before or after the command. Command flags must go after the command, otherwise the

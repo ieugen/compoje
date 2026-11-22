@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- `docker-api` deploy engine (`--deploy-driver docker-api` or `x-compoje docker.driver: docker-api`): deploys through the Docker Swarm API directly, so the docker CLI is not needed. Reaches remote swarms through your docker contexts (`ssh://` via `docker system dial-stdio` on the remote host, or socket forwarding with `docker.ssh-mode: forward`; `tcp://` with mutual TLS). Creates the same services, networks, secrets and configs as `docker stack deploy` for a common subset of compose keys and fails on the others; supports `--prune`, `--resolve-image` (digest pinning) and `--with-registry-auth` (docker config.json and credential helpers). `docker-cli` stays the default.
 - Docker secrets and configs from memory: a top-level secret/config definition with `x-compoje: {from: <context path>}` or `x-compoje: {template: <file>}` is created by compoje (`docker secret|config create NAME -`, content on stdin, name `<stack>_<key>-<sha256 prefix>` unless set, labelled with the stack) and passed to docker as external. Secret values no longer need to be written to disk. The ansible-vault and file examples use it; `local-path` is now legacy.
 - `render` command: `bb compoje render [-o FILE] <stack-file>` prints the rendered stack to stdout (or writes it to a file), for debugging and piping.
 - `deploy --show-secrets`: with `--dry-run`, show provider results in the printed context (redacted by default).
