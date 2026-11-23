@@ -137,6 +137,10 @@ secrets:
   tls_key:
     x-compoje:
       from: secrets.tls.key                # multi-line values (keys, certificates) work as they are
+  app_config:
+    x-compoje:
+      from: secrets.app                    # a whole provider result (a map) ...
+      format: edn                          # ... written as an EDN (or JSON) file
 
 configs:
   app_conf:
@@ -146,10 +150,11 @@ configs:
 
 | Key | Meaning |
 |---|---|
-| `from` | A dotted path in the [rendering context](#the-rendering-context): `app.db_password` is key `db_password` of secret `app`. Strings are used as they are; numbers and booleans become strings; maps and lists are an error. |
+| `from` | A dotted path in the [rendering context](#the-rendering-context): `secrets.app.db_password` is key `db_password` of secret `app`. Strings are used as they are; numbers and booleans become strings; maps and lists need `format`. |
+| `format` | Optional, with `from`: `edn` (pretty-printed) or `json`. Writes the value in that format, whatever its type, e.g. a Vault secret's key/value map as an EDN config file. The same output as a provider's legacy `local-path` with `format`. |
 | `template` | A template file, relative to the stack directory, rendered with the same context and syntax as the stack ([templates.md](templates.md)). Mostly for configs. |
 
-Give exactly one of them, and don't combine `x-compoje` with `file` or `external`.
+Give exactly one of `from` and `template`, and don't combine `x-compoje` with `file` or `external`.
 
 What compoje does on `deploy`:
 

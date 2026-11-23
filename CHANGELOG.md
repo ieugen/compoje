@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- In-memory secrets and configs take `format: edn|json` next to `from:`, so a whole map (e.g. a Vault secret's key/value pairs) can become an EDN or JSON file, like a provider's legacy `local-path` with `format`: `x-compoje: {from: secrets.app, format: edn}`. See docs/configuration.md, "Secrets and configs from memory".
+
 ### Fixed
 - Shell completion docs: the commands creating the completion files failed when the target directory didn't exist yet. The installer now says that `bb compoje ...` completion needs the script sourced from `~/.bashrc` (bash-completion loads it on demand only for the `compoje` command).
 

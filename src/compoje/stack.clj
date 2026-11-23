@@ -8,6 +8,10 @@
        db_password:
          x-compoje:
            from: secrets.app.db_password   # path in the render context
+       app_conf:
+         x-compoje:
+           from: secrets.app               # a map, written as edn (or json)
+           format: edn
      configs:
        nginx_conf:
          x-compoje:
@@ -17,7 +21,9 @@
    replaces the definition with {external: true, name: ...}, so the content
    never touches the disk. Pure functions; creating the objects is up to the
    deploy engine."
-  (:require [clojure.string :as str])
+  (:require [cheshire.core :as json]
+            [clojure.string :as str]
+            [compoje.utils :as u])
   (:import (java.security MessageDigest)))
 
 (def kinds
@@ -56,34 +62,46 @@
         :when (and (map? definition) (contains? definition "x-compoje"))]
     [kind k definition]))
 
+(def formats
+  "Values of x-compoje `format`: how a `from:` value is written."
+  #{"edn" "json"})
+
 (defn context-value
-  "Value at dotted `path` in the (keyword keyed) context. Strings as is, numbers
-   and booleans as strings; anything else is an error."
-  [context path]
-  (let [ks (map keyword (str/split (str path) #"\."))
-        v (get-in context ks ::missing)]
-    (cond
-      (= ::missing v) (throw (ex-info (str "x-compoje from: nothing at context path " path) {:path path}))
-      (string? v) v
-      (or (number? v) (boolean? v)) (str v)
-      :else (throw (ex-info (str "x-compoje from: " path " is not a string (it is a "
-                                 (if (map? v) "map; use a longer path" (type v)) ")")
-                            {:path path})))))
+  "Value at dotted `path` in the (keyword keyed) context, as the object's
+   content. Without `fmt`: strings as is, numbers and booleans as strings,
+   anything else is an error. With `fmt` \"edn\" or \"json\": any value,
+   rendered like a provider's local-path file with that format."
+  ([context path] (context-value context path nil))
+  ([context path fmt]
+   (let [ks (map keyword (str/split (str path) #"\."))
+         v (get-in context ks ::missing)]
+     (cond
+       (= ::missing v) (throw (ex-info (str "x-compoje from: nothing at context path " path) {:path path}))
+       (= "edn" fmt) (u/pprint-str v)
+       (= "json" fmt) (json/generate-string v)
+       (string? v) v
+       (or (number? v) (boolean? v)) (str v)
+       :else (throw (ex-info (str "x-compoje from: " path " is not a string (it is a "
+                                  (if (map? v) "map" (type v))
+                                  "; use a longer path, or format: edn or json)")
+                             {:path path}))))))
 
 ^:rct/test
 (comment
   (context-value {:app {:pw "s3cret" :port 5432}} "app.pw") ;=> "s3cret"
   (context-value {:app {:port 5432}} "app.port") ;=> "5432"
   (context-value {:token "t\n"} "token") ;=> "t\n"
+  (context-value {:app {:db {:pw "x"}}} "app.db" "edn") ;=> "{:pw \"x\"}\n"
+  (context-value {:app {:db {"port" 1}}} "app.db" "json") ;=> "{\"port\":1}"
   (try (context-value {:app {}} "app.pw") (catch Exception e (ex-message e)))
   ;=> "x-compoje from: nothing at context path app.pw"
   (try (context-value {:app {:db {:pw "x"}}} "app.db") (catch Exception e (ex-message e)))
-  ;=> "x-compoje from: app.db is not a string (it is a map; use a longer path)"
+  ;=> "x-compoje from: app.db is not a string (it is a map; use a longer path, or format: edn or json)"
   )
 
 (defn- object-data
   [kind k {:strs [file external] :as definition} {:keys [context render-template]}]
-  (let [{:strs [from template] :as xc} (get definition "x-compoje")
+  (let [{:strs [from template] fmt "format" :as xc} (get definition "x-compoje")
         where (str (name kind) " " k)]
     (when-not (map? xc)
       (throw (ex-info (str where ": x-compoje must be a map with from or template") {:key k})))
@@ -91,7 +109,10 @@
       (throw (ex-info (str where ": x-compoje can't be combined with file or external") {:key k})))
     (cond
       (and from template) (throw (ex-info (str where ": x-compoje takes from or template, not both") {:key k}))
-      from (context-value context from)
+      (and fmt (not from)) (throw (ex-info (str where ": x-compoje format only applies to from") {:key k}))
+      (and fmt (not (formats fmt)))
+      (throw (ex-info (str where ": x-compoje format must be edn or json, not " fmt) {:key k}))
+      from (context-value context from fmt)
       template (render-template template)
       :else (throw (ex-info (str where ": x-compoje needs from or template") {:key k})))))
 
@@ -152,6 +173,15 @@
   (try (managed-objects {"secrets" {"pw" {"file" "x" "x-compoje" {"from" "a"}}}} {})
        (catch Exception e (ex-message e)))
   ;=> "secret pw: x-compoje can't be combined with file or external"
+  (:data (first (managed-objects {"secrets" {"conf" {"x-compoje" {"from" "app" "format" "json"}}}}
+                                 {:context {:app {:a 1}} :stack-name "web"})))
+  ;=> "{\"a\":1}"
+  (try (managed-objects {"secrets" {"conf" {"x-compoje" {"from" "app" "format" "yaml"}}}} {:context {:app {}}})
+       (catch Exception e (ex-message e)))
+  ;=> "secret conf: x-compoje format must be edn or json, not yaml"
+  (try (managed-objects {"configs" {"c" {"x-compoje" {"template" "c.conf" "format" "edn"}}}} {})
+       (catch Exception e (ex-message e)))
+  ;=> "config c: x-compoje format only applies to from"
   )
 
 (defn externalize
