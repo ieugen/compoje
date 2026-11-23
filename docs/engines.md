@@ -4,8 +4,8 @@ compoje renders your stack, then hands it to one of two deploy engines:
 
 | Engine | How it deploys | Needs | Compose support |
 |---|---|---|---|
-| `docker-cli` (default, alias `docker`) | runs `docker stack deploy`, with the stack on stdin | the docker CLI | everything `docker stack deploy` supports |
-| `docker-api` | talks to the Docker Engine API directly | only Babashka (plus `ssh` for `ssh://` swarms) | a common subset; other keys are an error |
+| `docker-api` (default) | talks to the Docker Engine API directly | only Babashka (plus `ssh` for `ssh://` swarms) | a common subset; other keys are an error |
+| `docker-cli` (alias `docker`) | runs `docker stack deploy`, with the stack on stdin | the docker CLI | everything `docker stack deploy` supports |
 
 Both create the same services, networks, secrets and configs. For the compose keys `docker-api` supports, this is
 checked by compoje's integration tests: a reference stack deployed with `docker stack deploy` and with `docker-api`
@@ -18,16 +18,20 @@ Pick one per run or per stack. Later wins:
 ```yaml
 x-compoje:
   docker:
-    driver: docker-api
+    driver: docker-cli
 ```
 
 ```bash
-bb compoje --deploy-driver docker-api deploy stacks/web/stack.tpl.yml
+bb compoje --deploy-driver docker-cli deploy stacks/web/stack.tpl.yml
 ```
 
-Use `docker-api` when the docker CLI isn't available or not wanted, for example in a CI image that has only
-Babashka (`bb compoje.jar`, see [install.md](install.md#the-jar)). Use `docker-cli` for stacks that need compose keys
-`docker-api` doesn't support.
+`docker-api` is the default: it needs no docker CLI, for example in a CI image that has only Babashka
+(`bb compoje.jar`, see [install.md](install.md#the-jar)). Use `docker-cli` for stacks that need compose keys
+`docker-api` doesn't support; `docker-api` names the unsupported key when it fails.
+
+`--dry-run` differs: `docker-api` connects to the swarm and only reads (it logs what it would create or update),
+so it needs a reachable swarm manager. `docker-cli` only prints the `docker stack deploy` command line and needs no
+daemon.
 
 ## Connecting to the swarm
 

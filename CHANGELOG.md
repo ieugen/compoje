@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Breaking:** the default deploy engine is now `docker-api` (the Docker Engine API, no docker CLI needed), not `docker-cli`. Stacks using compose keys `docker-api` doesn't support now fail with an error naming the key; set `x-compoje docker.driver: docker-cli` or pass `--deploy-driver docker-cli` to keep using `docker stack deploy`. `--dry-run` with `docker-api` reads from the swarm, so it needs a reachable manager. See docs/engines.md.
+
 ## [0.4.1] - 2026-11-23
 
 ### Added

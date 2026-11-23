@@ -52,7 +52,7 @@ jobs:
         run: |
           bb build-jar
           test "$(bb target/compoje.jar --version)" = "compoje $VERSION"
-          bb target/compoje.jar deploy --dry-run example-stacks/nginx/stack.tpl.yml > /dev/null
+          bb target/compoje.jar deploy --dry-run --deploy-driver docker-cli example-stacks/nginx/stack.tpl.yml > /dev/null
           (cd target && sha256sum compoje.jar > compoje.jar.sha256)
 
       - name: Release notes from CHANGELOG.md

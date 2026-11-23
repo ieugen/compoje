@@ -176,9 +176,9 @@
 
 (defn deploy-driver
   "Engine to deploy with: --deploy-driver, else x-compoje docker.driver, else
-   docker-cli. `docker` is an alias of docker-cli."
+   docker-api. `docker` is an alias of docker-cli."
   [flag context]
-  (let [d (some-> (or flag (get-in context [:docker :driver]) "docker-cli") name)]
+  (let [d (some-> (or flag (get-in context [:docker :driver]) "docker-api") name)]
     (case d
       ("docker" "docker-cli") :docker-cli
       "docker-api" :docker-api
@@ -187,7 +187,8 @@
 
 ^:rct/test
 (comment
-  (deploy-driver nil {}) ;=> :docker-cli
+  (deploy-driver nil {}) ;=> :docker-api
+  (deploy-driver nil {:docker {:driver "docker-cli"}}) ;=> :docker-cli
   (deploy-driver :docker {:docker {:driver "docker-api"}}) ;=> :docker-cli
   (deploy-driver nil {:docker {:driver "docker-api"}}) ;=> :docker-api
   (try (deploy-driver "k8s" {}) (catch Exception e (ex-message e)))
@@ -377,7 +378,7 @@
    :flags ["-v, --verbose" {:doc "Increase verbosity: -v debug, -vv trace."
                             :key :verbosity
                             :default 0}
-           "--deploy-driver DRIVER" {:doc "Deploy engine: docker-cli (default; alias docker) runs `docker stack deploy`, docker-api talks to the Docker API directly (no docker CLI needed). Overrides x-compoje docker.driver."
+           "--deploy-driver DRIVER" {:doc "Deploy engine: docker-api (default) talks to the Docker API directly (no docker CLI needed), docker-cli (alias docker) runs `docker stack deploy`. Overrides x-compoje docker.driver."
                                      :parse keyword}
            "--version" "Print the compoje version and exit."]
    :commands ["deploy <stack-file>" #'deploy

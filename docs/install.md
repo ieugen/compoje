@@ -144,7 +144,8 @@ version in CI, so a new release doesn't change your deploys unannounced.
 
 **Update:** download the new jar.
 
-A CI job then needs only bb and the docker CLI:
+A CI job then needs only bb (the default `docker-api` engine needs no docker CLI; `--context` reads the contexts in
+`~/.docker` like the CLI would):
 
 ```bash
 curl -fsSL -o compoje.jar https://github.com/ieugen/compoje/releases/download/v0.2.0/compoje.jar

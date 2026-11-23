@@ -55,7 +55,7 @@ Options for `docker stack deploy`.
 | `prune` | `false` | Remove services no longer in the stack. | `--prune` |
 | `resolve-image` | `always` | `always`, `changed` or `never`. | `--resolve-image` |
 | `with-registry-auth` | `true` | Send registry credentials to the swarm agents. | `--[no-]with-registry-auth` |
-| `driver` | `docker-cli` | Deploy engine: `docker-cli` runs `docker stack deploy`; `docker-api` uses the Docker API directly, without the docker CLI. | `--deploy-driver` |
+| `driver` | `docker-api` | Deploy engine: `docker-api` uses the Docker API directly, without the docker CLI; `docker-cli` runs `docker stack deploy`. | `--deploy-driver` |
 | `ssh-mode` | `dial-stdio` | `docker-api` with an `ssh://` endpoint: `dial-stdio` runs `docker system dial-stdio` on the remote host (like the docker CLI); `forward` forwards the remote socket instead (no remote docker binary needed). | none |
 | `allow-insecure-tcp` | `false` | `docker-api`: allow plain `tcp://` without TLS (unauthenticated root on the host; avoid). | none |
 
