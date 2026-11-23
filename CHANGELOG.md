@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-23
+
 ### Changed
 - `docker-api` engine, file-based secrets and configs that already exist: a config with the same content and labels is left alone (`Unchanged config ...`, no update request); a config whose content changed is reported on `--dry-run` (the deploy would fail); for secrets, whose content Docker never returns, the messages say only the labels are updated (`Would update labels of secret ...`). Before, every existing one was reported as `Would update`.
 - `migrate` on a template that isn't valid YAML (e.g. an Ansible `!unsafe` tag) still moves `compoje.edn` into `x-compoje`, and only skips the secret steps, with a warning saying why. It used to stop with an error and do nothing.
@@ -143,7 +145,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `--set path.to.key=value` CLI overrides, deep-merged over the file config.
 - Kaocha test setup and cljfmt formatting via babashka.
 
-[Unreleased]: https://github.com/ieugen/compoje/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/ieugen/compoje/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/ieugen/compoje/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/ieugen/compoje/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ieugen/compoje/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ieugen/compoje/compare/v0.4.1...v0.5.0
