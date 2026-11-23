@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-23
+
 ### Added
 - In-memory secrets and configs take `format: edn|json` next to `from:`, so a whole map (e.g. a Vault secret's key/value pairs) can become an EDN or JSON file, like a provider's legacy `local-path` with `format`: `x-compoje: {from: secrets.app, format: edn}`. See docs/configuration.md, "Secrets and configs from memory".
 - `compoje migrate` converts `local-path` secrets without `spit-key` that use `format: edn` or `format: json` (e.g. a whole Vault secret written as an EDN file) to `x-compoje: {from: secrets.<name>, format: ...}`. They were skipped before.
@@ -104,5 +106,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `--set path.to.key=value` CLI overrides, deep-merged over the file config.
 - Kaocha test setup and cljfmt formatting via babashka.
 
-[Unreleased]: https://github.com/ieugen/compoje/compare/0.1...HEAD
+[Unreleased]: https://github.com/ieugen/compoje/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/ieugen/compoje/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/ieugen/compoje/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/ieugen/compoje/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/ieugen/compoje/compare/0.1...v0.2.0
 [0.1]: https://github.com/ieugen/compoje/releases/tag/0.1
