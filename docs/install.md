@@ -24,7 +24,7 @@ Options go after the expression:
 
 ```bash
 # a specific release
-bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))' --version v0.6.0
+bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))' --version v0.6.1
 # somewhere else than ~/.local/bin
 bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))' --dir /usr/local/bin
 # remove it again
@@ -45,7 +45,7 @@ bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/mai
 **Update:** run the same line again; it replaces the jar and the launcher. **Pin:** add `--version`. The installer
 is [install.clj](../install.clj) in the repository; read it before piping it from the internet, or run a copy:
 `bb install.clj --help`. To use the installer of a specific release, replace `main` in the URL with the tag
-(`.../compoje/v0.6.0/install.clj`).
+(`.../compoje/v0.6.1/install.clj`).
 
 The command needs only `bb` at run time, no Java and no downloads.
 
@@ -74,7 +74,7 @@ Add compoje and a `compoje` task to the project's `bb.edn`:
 
 ```clojure
 ;; bb.edn
-{:deps {io.github.ieugen/compoje {:git/tag "v0.6.0" :git/sha "b1672749a05442ab9c6787c1ca838aaab5d3c3b1"}}
+{:deps {io.github.ieugen/compoje {:git/tag "v0.6.1" :git/sha "9bd628eff9d579bc40119016d179f02026fe4ee7"}}
  :tasks {:requires ([compoje.cli :as cli])
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}
@@ -84,7 +84,7 @@ Every release's notes contain this line with the right tag and sha. You can also
 Use the commit the tag points to: for an annotated tag, that's the line ending in `^{}`.
 
 ```bash
-git ls-remote --tags https://github.com/ieugen/compoje 'v0.6.0*'
+git ls-remote --tags https://github.com/ieugen/compoje 'v0.6.1*'
 ```
 
 Then run it with `bb compoje deploy ...`.
@@ -108,14 +108,14 @@ Read [CHANGELOG.md](../CHANGELOG.md) first.
 **From the release jar** (needs only bb):
 
 ```bash
-bbin install https://github.com/ieugen/compoje/releases/download/v0.6.0/compoje.jar
+bbin install https://github.com/ieugen/compoje/releases/download/v0.6.1/compoje.jar
 compoje --version
 ```
 
 **From git** (needs Java the first time, like the per-project setup):
 
 ```bash
-bbin install io.github.ieugen/compoje --git/tag v0.6.0
+bbin install io.github.ieugen/compoje --git/tag v0.6.1
 ```
 
 Then use `compoje deploy ...` instead of `bb compoje deploy ...`.
@@ -132,8 +132,8 @@ Every release has `compoje.jar` and `compoje.jar.sha256`. The jar holds compoje 
 only bb, with no Java and no downloads at run time, which makes it a good fit for CI images and servers.
 
 ```bash
-curl -fLO https://github.com/ieugen/compoje/releases/download/v0.6.0/compoje.jar
-curl -fLO https://github.com/ieugen/compoje/releases/download/v0.6.0/compoje.jar.sha256
+curl -fLO https://github.com/ieugen/compoje/releases/download/v0.6.1/compoje.jar
+curl -fLO https://github.com/ieugen/compoje/releases/download/v0.6.1/compoje.jar.sha256
 sha256sum -c compoje.jar.sha256
 bb compoje.jar --version
 bb compoje.jar deploy --dry-run stacks/web/stack.tpl.yml
@@ -148,7 +148,7 @@ A CI job then needs only bb (the default `docker-api` engine needs no docker CLI
 `~/.docker` like the CLI would):
 
 ```bash
-curl -fsSL -o compoje.jar https://github.com/ieugen/compoje/releases/download/v0.6.0/compoje.jar
+curl -fsSL -o compoje.jar https://github.com/ieugen/compoje/releases/download/v0.6.1/compoje.jar
 bb compoje.jar deploy --context prod stacks/web/stack.tpl.yml
 ```
 
