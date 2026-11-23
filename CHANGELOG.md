@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-11-23
+
 ### Fixed
 - `docker-api` engine: a top-level volume or network declared with no settings (`volumes:` → `data:` with nothing after it) was reported as undefined ("Service web uses undefined volume data"). It is now a definition with the defaults, as in `docker stack deploy`.
 
@@ -127,7 +129,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `--set path.to.key=value` CLI overrides, deep-merged over the file config.
 - Kaocha test setup and cljfmt formatting via babashka.
 
-[Unreleased]: https://github.com/ieugen/compoje/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/ieugen/compoje/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/ieugen/compoje/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ieugen/compoje/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ieugen/compoje/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/ieugen/compoje/compare/v0.4.0...v0.4.1
