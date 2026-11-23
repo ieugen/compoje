@@ -54,7 +54,7 @@ Other ways to install it, all described in [[file:docs/install.md][docs/install.
 
 #+BEGIN_SRC clojure
 ;; bb.edn
-{:deps {io.github.ieugen/compoje {:git/tag "v0.4.1" :git/sha "a7365eb9dd3a0ecd5687d07ec6153d8102d559e4"}}
+{:deps {io.github.ieugen/compoje {:git/tag "v0.5.0" :git/sha "6f150439249e0343c59bb78db7b6f144a92309ae"}}
  :tasks {:requires ([compoje.cli :as cli])
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}
