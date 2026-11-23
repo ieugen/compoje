@@ -567,10 +567,12 @@
                             {:unsupported unsupported})))
         services (get stack-data "services")
         uses-default? (some (fn [[_ s]] (nil? (get s "networks"))) services)
-        network-defs (cond-> (or (get stack-data "networks") {})
+        ;; `name:` with no body (all defaults) parses as nil: still a definition
+        defs (fn [top] (update-vals (or (get stack-data top) {}) #(or % {})))
+        network-defs (cond-> (defs "networks")
                        uses-default? (update "default" #(or % {})))
-        opts (assoc opts :network-defs network-defs :volume-defs (or (get stack-data "volumes") {}))]
-    {:networks (vec (for [[k d] (sort-by key network-defs)] (network-spec stack (str k) (or d {}))))
+        opts (assoc opts :network-defs network-defs :volume-defs (defs "volumes"))]
+    {:networks (vec (for [[k d] (sort-by key network-defs)] (network-spec stack (str k) d)))
      :secrets (vec (for [[k d] (sort-by key (get stack-data "secrets"))] (object-spec stack k d)))
      :configs (vec (for [[k d] (sort-by key (get stack-data "configs"))] (object-spec stack k d)))
      :services (vec (for [[k s] (sort-by key services)] (service-spec (str k) s opts)))

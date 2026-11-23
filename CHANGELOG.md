@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- `docker-api` engine: a top-level volume or network declared with no settings (`volumes:` → `data:` with nothing after it) was reported as undefined ("Service web uses undefined volume data"). It is now a definition with the defaults, as in `docker stack deploy`.
+
 ## [0.6.0] - 2026-11-23
 
 ### Changed

@@ -57,6 +57,17 @@
   (is (thrown-with-msg? clojure.lang.ExceptionInfo #"undefined volume v"
                         (plan "services:\n  a:\n    image: i\n    volumes: [\"v:/d\"]\n"))))
 
+(deftest empty-definitions
+  (testing "`v:` / `n:` with no body (all defaults) are definitions, like {} (docker accepts them)"
+    (let [p (plan (str "services:\n  a:\n    image: i\n    networks: [n]\n    volumes: [\"v:/d\"]\n"
+                       "networks:\n  n:\nvolumes:\n  v:\n"))
+          task (get-in (first (:services p)) [:spec "TaskTemplate"])]
+      (is (= [{"Type" "volume" "Source" "ref_v" "Target" "/d"
+               "VolumeOptions" {"Labels" {"com.docker.stack.namespace" "ref"}}}]
+             (get-in task ["ContainerSpec" "Mounts"])))
+      (is (= [{"Target" "ref_n" "Aliases" ["a"]}] (get task "Networks")))
+      (is (= ["ref_n"] (map :name (:networks p)))))))
+
 (deftest external-objects
   (let [p (plan (str "services:\n  a:\n    image: i\n    networks: [host_net]\n"
                      "networks:\n  host_net:\n    name: host\n    external: true\n"
