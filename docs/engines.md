@@ -88,7 +88,7 @@ The same steps as `docker stack deploy`:
      and compoje says how to fix it (`file-hash` in the name, or `x-compoje`).
    - External ones must exist.
 4. Creates or updates the services (`<stack>_<name>`).
-5. With `--prune`, removes the stack's services that are no longer in the file.
+5. Unless `--no-prune`, removes the stack's services that are no longer in the file.
 
 Like `docker stack deploy`, it doesn't wait for the services to converge. Check with `docker service ls` or
 `docker stack ps`.
@@ -96,10 +96,16 @@ Like `docker stack deploy`, it doesn't wait for the services to converge. Check 
 Options:
 
 - `--resolve-image always` (default) pins each image to its digest and records the platforms it supports, like
-  docker. `changed` re-resolves only images whose tag changed; `never` deploys the tag as written.
+  docker. `changed` re-resolves only images whose tag (as written in the stack) changed, and otherwise keeps the
+  digest deployed before; `never` deploys the tag as written. With `--no-with-registry-auth` the registry is asked
+  without credentials, so private images stay unpinned (with a warning).
 - `--with-registry-auth` (default on) sends registry credentials to the swarm, so nodes can pull private images.
   Credentials come from `~/.docker/config.json`: inline `auths` entries, or a credential helper (`credsStore`,
-  `credHelpers`). Helpers run the separate `docker-credential-<name>` program, not the docker CLI.
+  `credHelpers`). Helpers run the separate `docker-credential-<name>` program, not the docker CLI. They are sent with
+  the registry query, service creation and service updates.
+- `--prune` (default on) removes the stack's services that are no longer in the file; `--no-prune` keeps them.
+
+Both engines take the same options, with the same defaults and precedence, and `deploy` logs the ones in effect.
 - `--dry-run` connects and only reads. It lists what it would create, update or remove.
 
 Variables in the stack (`${VAR}`, `${VAR:-default}`, `${VAR-default}`, `${VAR:?message}`, `$VAR`, `$$` for a

@@ -202,7 +202,7 @@ Settings come from several places. Later ones win:
 |---|---|
 | `--stack NAME` | stack name (overrides `x-compoje.docker.stack`) |
 | `--context NAME` | docker context to deploy to, e.g. a remote swarm |
-| `--prune` | remove services that are no longer in the stack |
+| `--no-prune` | keep services that are no longer in the stack (they are removed by default) |
 | `--resolve-image always\|changed\|never` | image digest resolution (default `always`) |
 | `--no-with-registry-auth` | don't send registry credentials to the swarm (sent by default) |
 | `--dry-run` | render and print, don't deploy |

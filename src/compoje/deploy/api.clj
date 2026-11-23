@@ -155,7 +155,10 @@
             auth (when with-registry-auth
                    (some-> (registry-auth/credentials docker-config image) registry-auth/header))
             old (get existing name)
-            same-tag? (= image (get-in old ["Spec" "Labels" "com.docker.stack.image"]))
+            ;; like docker/cli: the image as written in the stack (the label), not
+            ;; the shortened spec image (docker.io/nginx:1 vs nginx:1)
+            same-tag? (= (get-in spec ["Labels" "com.docker.stack.image"])
+                         (get-in old ["Spec" "Labels" "com.docker.stack.image"]))
             spec (cond-> spec
                    (seq secret-refs) (assoc-in ["TaskTemplate" "ContainerSpec" "Secrets"]
                                                (file-references secret-refs secrets "secret" name))

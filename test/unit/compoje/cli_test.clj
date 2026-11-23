@@ -65,7 +65,8 @@
   (testing "x-compoje docker config reaches the context, with defaults"
     (is (= {:stack "nginx"
             :resolve-image "always"
-            :with-registry-auth true}
+            :with-registry-auth true
+            :prune true}
            (:docker (cli/deploy-context {:stack-file nginx})))))
 
   (testing "precedence: defaults < x-compoje < --set < CLI flags"
@@ -74,16 +75,16 @@
                                                      "docker.context=set-ctx"]
                                                :stack "from-flag"
                                                :with-registry-auth false
-                                               :prune true}))]
+                                               :prune false}))]
       (is (= "from-flag" (:stack docker)))
       (is (= "set-ctx" (:context docker)))
-      (is (true? (:prune docker)))
+      (is (false? (:prune docker)) "--no-prune overrides the default")
       (is (not (:with-registry-auth docker)))))
 
   (testing "the docker command has the stack name"
     (let [docker (:docker (cli/deploy-context {:stack-file nginx}))]
       (is (= ["docker" "stack" "deploy" "--with-registry-auth" "--resolve-image" "always"
-              "--compose-file" "-" "nginx"]
+              "--prune" "--compose-file" "-" "nginx"]
              (docker/deploy-args docker))))))
 
 (deftest deploy-args-test

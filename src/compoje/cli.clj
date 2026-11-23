@@ -54,7 +54,8 @@
   "Defaults for docker deploy options.
    x-compoje docker config and docker CLI flags override these."
   {:resolve-image "always"
-   :with-registry-auth true})
+   :with-registry-auth true
+   :prune true})
 
 (def docker-cli-keys
   "Deploy flags that map 1:1 onto keys under :docker in the context."
@@ -195,6 +196,26 @@
   ;=> "Unsupported deploy driver: k8s. Supported: docker-cli (alias docker), docker-api."
   )
 
+(defn deploy-options-str
+  "One line telling the user how the stack is deployed: engine and the docker
+   options in effect (after defaults, x-compoje, --set and flags)."
+  [driver {:keys [stack context prune resolve-image with-registry-auth]} dry-run]
+  (str (if dry-run "Dry run, would deploy" "Deploying") " stack " stack " with " (name driver) ": "
+       "context " (or (some-> context str) "<default>")
+       ", resolve-image " (or (some-> resolve-image str) "always")
+       ", with-registry-auth " (boolean with-registry-auth)
+       ", prune " (boolean prune)))
+
+^:rct/test
+(comment
+  (deploy-options-str :docker-api {:stack "web" :resolve-image "always" :with-registry-auth true} false)
+  ;=> "Deploying stack web with docker-api: context <default>, resolve-image always, with-registry-auth true, prune false"
+  (deploy-options-str :docker-cli {:stack "web" :context "prod" :resolve-image "never" :with-registry-auth false
+                                   :prune true}
+                      true)
+  ;=> "Dry run, would deploy stack web with docker-cli: context prod, resolve-image never, with-registry-auth false, prune true"
+  )
+
 (defn api-endpoint
   "Docker endpoint for the docker-api engine: docker.context (or the usual
    resolution) plus x-compoje docker.ssh-mode and docker.allow-insecure-tcp."
@@ -227,8 +248,7 @@
   written to disk; use `compoje render -o FILE` for that."
   {:flags (into shared-flags
                 ["--context CONTEXT" "Docker context to deploy to (docker --context)."
-                 "--prune" {:doc "Prune services that are no longer referenced."
-                            :value true}
+                 "--[no-]prune" "Remove the stack's services that are no longer in the stack file. Default: on."
                  "--resolve-image STRATEGY" "Query the registry to resolve image digest and supported platforms: always, changed, never. Default: always."
                  "--[no-]with-registry-auth" "Send registry authentication details to Swarm agents. Default: on."
                  "--dry-run" {:doc "Print the docker command, the context (secrets redacted) and the rendered stack (stdout). Do not deploy."
@@ -247,6 +267,7 @@
         (log/info (printable-context context show-secrets))
         (print contents)
         (flush))
+      (log/info (deploy-options-str driver docker dry-run))
       (case driver
         :docker-cli
         (if dry-run

@@ -52,7 +52,7 @@ Options for `docker stack deploy`.
 |---|---|---|---|
 | `stack` | none, required | Stack name. | `--stack` |
 | `context` | current docker context | Docker context to deploy to. | `--context` |
-| `prune` | `false` | Remove services no longer in the stack. | `--prune` |
+| `prune` | `true` | Remove the stack's services that are no longer in the stack file. | `--[no-]prune` |
 | `resolve-image` | `always` | `always`, `changed` or `never`. | `--resolve-image` |
 | `with-registry-auth` | `true` | Send registry credentials to the swarm agents. | `--[no-]with-registry-auth` |
 | `driver` | `docker-api` | Deploy engine: `docker-api` uses the Docker API directly, without the docker CLI; `docker-cli` runs `docker stack deploy`. | `--deploy-driver` |
@@ -200,7 +200,7 @@ Settings are merged from these sources. Later ones win:
 1. Built-in docker defaults (`resolve-image: always`, `with-registry-auth: true`)
 2. The `x-compoje:` section of the stack file
 3. `--set` overrides
-4. Deploy flags (`--stack`, `--context`, `--prune`, `--resolve-image`, `--[no-]with-registry-auth`)
+4. Deploy flags (`--stack`, `--context`, `--[no-]prune`, `--resolve-image`, `--[no-]with-registry-auth`)
 
 Maps are merged deeply: `--set values.a=1` changes `values.a` and keeps the other values. A flag only overrides
 when you pass it.

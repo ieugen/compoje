@@ -42,7 +42,7 @@ Deploys a stack file (a compose file with an `x-compoje:` section, see [configur
 |---|---|
 | `--stack NAME` | Stack name. Overrides `docker.stack`. A stack name is required. |
 | `--context NAME` | [Docker context](https://docs.docker.com/engine/context/working-with-contexts/) to deploy to, e.g. a remote swarm (`docker --context NAME`). |
-| `--prune` | Remove services that are no longer in the stack. |
+| `--[no-]prune` | Remove the stack's services that are no longer in the stack file. Default: on; `--no-prune` keeps them. |
 | `--resolve-image STRATEGY` | `always` (default), `changed` or `never`. Passed to `docker stack deploy`. |
 | `--[no-]with-registry-auth` | Send registry credentials to the swarm agents. On by default. |
 | `--dry-run` | Print the docker command and the context (on stderr, provider results shown as `<redacted>`), and the rendered stack (on stdout). Deploys nothing. |
@@ -53,6 +53,13 @@ The docker command it runs looks like this:
 
 ```text
 docker [--context CTX] stack deploy [--with-registry-auth] --resolve-image always [--prune] --compose-file - STACK
+```
+
+Before deploying (also with `--dry-run`), `deploy` logs the engine and the docker options in effect, after
+defaults, `x-compoje docker`, `--set` and flags:
+
+```text
+Deploying stack web with docker-api: context prod, resolve-image always, with-registry-auth true, prune true
 ```
 
 Notes:
@@ -69,7 +76,7 @@ Examples:
 
 ```bash
 bb compoje deploy --dry-run stacks/web/stack.tpl.yml
-bb compoje deploy --context prod --prune stacks/web/stack.tpl.yml
+bb compoje deploy --context prod --no-prune stacks/web/stack.tpl.yml
 bb compoje deploy --stack web-test --set values.replicas=1 stacks/web/stack.tpl.yml
 bb compoje -v deploy --dry-run stacks/web/stack.tpl.yml
 ```
