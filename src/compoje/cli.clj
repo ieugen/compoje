@@ -291,9 +291,9 @@
      [(str "Template: " secret-refs " reference(s) to provider results now use secrets.<name>.")])
    (for [{:keys [file refs]} template-files]
      (str file ": " refs " reference(s) to provider results now use secrets.<name>."))
-   (for [{:keys [secret from defs dropped-keys]} converted]
+   (for [{:keys [secret from defs dropped-keys] fmt :format} converted]
      (str "Secret " secret ": " (str/join ", " (map #(str/join "." %) defs))
-          " now created from memory (x-compoje from: " from "); local-path removed."
+          " now created from memory (x-compoje from: " from (when fmt (str ", format: " fmt)) "); local-path removed."
           (when (seq dropped-keys) (str " Dropped keys: " (str/join ", " dropped-keys) "."))))
    (for [{:keys [secret local-path reason]} skipped]
      (str "Skipped secret " secret " (local-path " local-path "): " reason))

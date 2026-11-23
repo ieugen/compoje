@@ -152,7 +152,7 @@
 
 (defn plan
   "Plan the conversions for parsed template `data` (string keys):
-   {:convert [{:secret name :local-path L :from path :defs [[top key] ...]}]
+   {:convert [{:secret name :local-path L :from path :format F :defs [[top key] ...]}]
     :skip [{:secret name :local-path L :reason text}]}"
   [data]
   (let [providers (into {} (map (juxt #(str (get % "name")) identity)) (get-in data ["x-compoje" "providers"]))
@@ -165,6 +165,8 @@
        (let [sname (str (get s "name"))
              lp (get s "local-path")
              spit-key (some-> (get s "spit-key") str)
+             ;; without spit-key, edn/json is how the whole result was written
+             fmt (when-not spit-key (#{"edn" "json"} (some-> (get s "format") str)))
              users (filter #(= (normalize-path lp) (:file %)) defs)
              skip #(update acc :skip conj {:secret sname :local-path lp :reason %})]
          (cond
@@ -173,11 +175,12 @@
            (str/includes? sname ".") (skip "the secret name contains a dot, which a from: path can't express; rename it, then migrate again.")
            (and spit-key (str/includes? spit-key ".")) (skip (str "spit-key " spit-key " contains a dot, which a from: path can't express; rename the key in the secret source (e.g. "
                                                                   (str/replace spit-key "." "_") "), or keep local-path."))
-           (and (nil? spit-key) (not (result-is-string? s (get providers (str (get s "provider"))))))
-           (skip "without spit-key the whole provider result (a map) is written; add spit-key, or use x-compoje: {from: <name>.<key>} by hand.")
-           :else (update acc :convert conj {:secret sname :local-path lp
-                                            :from (str "secrets." sname (when spit-key (str "." spit-key)))
-                                            :defs (mapv (juxt :top :key) users)}))))
+           (and (nil? spit-key) (nil? fmt) (not (result-is-string? s (get providers (str (get s "provider"))))))
+           (skip "without spit-key the whole provider result (a map) is written; add spit-key, or write x-compoje: {from: secrets.<name>.<key>} (one value) or {from: secrets.<name>, format: edn} (the whole map) by hand.")
+           :else (update acc :convert conj (cond-> {:secret sname :local-path lp
+                                                    :from (str "secrets." sname (when spit-key (str "." spit-key)))
+                                                    :defs (mapv (juxt :top :key) users)}
+                                             fmt (assoc :format fmt))))))
      {:convert [] :skip []}
      (get-in data ["x-compoje" "secrets"]))))
 
@@ -189,19 +192,20 @@
                                  {"name" "tls" "provider" "v" "local-path" "gen/tls" "spit-key" "cert.key"}
                                  {"name" "tok" "provider" "f" "file" "t.txt" "local-path" "gen/tok"}
                                  {"name" "map" "provider" "v" "local-path" "gen/map"}
+                                 {"name" "conf" "provider" "v" "format" "edn" "local-path" "gen/conf.edn"}
                                  {"name" "unused" "provider" "f" "local-path" "gen/u"}
                                  {"name" "plain" "provider" "v"}]}
          "secrets" {"pw" {"file" "gen/pw.txt"} "tls" {"file" "gen/tls"} "tok" {"file" "gen/tok"}
-                    "map" {"file" "gen/map"}}})
-  ;=> {:convert [{:secret "app" :local-path "./gen/pw.txt" :from "secrets.app.db_password" :defs [["secrets" "pw"]]} {:secret "tok" :local-path "gen/tok" :from "secrets.tok" :defs [["secrets" "tok"]]}] :skip [{:secret "tls" :local-path "gen/tls" :reason "spit-key cert.key contains a dot, which a from: path can't express; rename the key in the secret source (e.g. cert_key), or keep local-path."} {:secret "map" :local-path "gen/map" :reason "without spit-key the whole provider result (a map) is written; add spit-key, or use x-compoje: {from: <name>.<key>} by hand."} {:secret "unused" :local-path "gen/u" :reason "local-path is not used as a Docker secret or config file in this stack; left as is."}]}
+                    "map" {"file" "gen/map"} "conf.edn" {"file" "gen/conf.edn"}}})
+  ;=> {:convert [{:secret "app" :local-path "./gen/pw.txt" :from "secrets.app.db_password" :defs [["secrets" "pw"]]} {:secret "tok" :local-path "gen/tok" :from "secrets.tok" :defs [["secrets" "tok"]]} {:secret "conf" :local-path "gen/conf.edn" :from "secrets.conf" :defs [["secrets" "conf.edn"]] :format "edn"}] :skip [{:secret "tls" :local-path "gen/tls" :reason "spit-key cert.key contains a dot, which a from: path can't express; rename the key in the secret source (e.g. cert_key), or keep local-path."} {:secret "map" :local-path "gen/map" :reason "without spit-key the whole provider result (a map) is written; add spit-key, or write x-compoje: {from: secrets.<name>.<key>} (one value) or {from: secrets.<name>, format: edn} (the whole map) by hand."} {:secret "unused" :local-path "gen/u" :reason "local-path is not used as a Docker secret or config file in this stack; left as is."}]}
   )
 
 ;; ------------------------------------------------------------------ editing
 
 (defn- new-definition
-  "Replacement lines for definition [start end): the key line, x-compoje from,
-   plus a kept explicit name and the labels block, copied verbatim."
-  [lines [start end] from]
+  "Replacement lines for definition [start end): the key line, x-compoje from
+   (and format), plus a kept explicit name and the labels block, copied verbatim."
+  [lines [start end] from fmt]
   (let [n (indent (nth lines start))
         step (- (or (child-indent lines start end) (+ n 2)) n)
         pad (apply str (repeat (+ n step) " "))
@@ -214,19 +218,20 @@
     (vec (concat [(nth lines start)
                   (str pad "x-compoje:")
                   (str pad (apply str (repeat step " ")) "from: " from)]
+                 (when fmt [(str pad (apply str (repeat step " ")) "format: " fmt)])
                  (when keep-name? [(nth lines name-line)])
                  labels))))
 
 (defn- expected-data
   "The data the template should have after converting `c`."
-  [data {:keys [secret from defs]}]
+  [data {:keys [secret from defs] fmt :format}]
   (let [data (update-in data ["x-compoje" "secrets"]
                         (fn [ss] (mapv #(if (= secret (str (get % "name"))) (dissoc % "local-path" "spit-key") %) ss)))]
     (reduce (fn [d [top k]]
               (let [old (get-in d [top k])
                     keep-name? (and (get old "name") (not (str/includes? (str (get old "name")) "file-hash")))]
                 (assoc-in d [top k]
-                          (cond-> {"x-compoje" {"from" from}}
+                          (cond-> {"x-compoje" (cond-> {"from" from} fmt (assoc "format" fmt))}
                             keep-name? (assoc "name" (get old "name"))
                             (get old "labels") (assoc "labels" (get old "labels"))))))
             data
@@ -245,7 +250,7 @@
         lines (reduce (fn [ls [top k]]
                         (when ls
                           (when-let [r (definition-range ls top k)]
-                            (vec (concat (subvec ls 0 (first r)) (new-definition ls r (:from c)) (subvec ls (second r)))))))
+                            (vec (concat (subvec ls 0 (first r)) (new-definition ls r (:from c) (:format c)) (subvec ls (second r)))))))
                       lines
                       ;; edit bottom-up so earlier ranges stay valid
                       (sort-by (fn [[top k]] (- (or (first (definition-range lines top k)) 0))) defs))

@@ -163,6 +163,9 @@ How it works:
   that path as its `file:`.
 - The definition becomes `x-compoje: {from: secrets.<secret>.<spit-key>}`, or `{from: secrets.<secret>}` when the whole result is
   a string (file provider with a raw file, ansible-vault with `format: raw`).
+- Without `spit-key`, a secret with `format: edn` or `format: json` wrote its whole result in that format. Its
+  definition becomes `x-compoje: {from: secrets.<secret>, format: edn}` (or `json`), which creates the same content
+  from memory. The secret keeps its `format`.
 - `local-path` and `spit-key` are removed, along with comment lines directly above them.
 - A `name:` built with `file-hash` is dropped: compoje names the object `<stack>_<key>-<hash>` itself. Any other
   `name:` and `labels:` are kept. Other keys are dropped and listed.
@@ -175,7 +178,7 @@ Secrets that can't be converted safely are left as they are, and the reason is p
 | Reason | What to do |
 |---|---|
 | `spit-key` contains a dot (`cert.key`) | `from:` paths split on dots. Rename the key in the secret source (`cert_key`), or keep `local-path`. |
-| No `spit-key`, and the result is a map | Add `spit-key`, or write `x-compoje: {from: secrets.<name>.<key>}` by hand. |
+| No `spit-key`, no `format: edn`/`json`, and the result is a map | Add `spit-key`, or write `x-compoje: {from: secrets.<name>.<key>}` (one value) or `{from: secrets.<name>, format: edn}` (the whole map) by hand. |
 | `local-path` is not used as a `file:` of a secret or config | It may feed something else (a bind mount, another tool); left as is. |
 | The file is also used elsewhere in the template | E.g. a `file-path` tag or a volume. Edit by hand. |
 | Could not locate the definitions in the text | Flow style (`secrets: {pw: {file: x}}`) or unusual layout. Edit by hand. |

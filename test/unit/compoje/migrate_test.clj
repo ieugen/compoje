@@ -7,7 +7,9 @@
             [compoje.context :as context]
             [compoje.migrate :as migrate]
             [compoje.migrate-secrets :as ms]
+            [compoje.providers :as providers]
             [compoje.render]
+            [compoje.stack :as stack]
             [yamlstar.core :as yaml]))
 
 (def fixtures "test-resources/migrate")
@@ -144,6 +146,24 @@
             text (compoje.render/render stack-file ctx {})
             [_sent objects] (cli/prepare-stack ctx text)]
         (is (= [["db_password" "s3cret"]] (map (juxt :key :data) objects)))))))
+
+(deftest convert-whole-result-with-format
+  (let [text (str "x-compoje:\n  secrets:\n  - name: app\n    provider: vault\n    format: edn\n"
+                  "    local-path: secrets/config.edn\n    secret-path: app/config\n\n"
+                  "secrets:\n  config.edn:\n    file: secrets/config.edn\n"
+                  "    name: app_config_<% file-hash 'secrets/config.edn' %>\n")
+        {:keys [converted skipped] new-text :text} (ms/convert text)]
+    (is (empty? skipped))
+    (is (= [["app" "secrets.app" "edn"]] (map (juxt :secret :from :format) converted)))
+    (is (= (str "x-compoje:\n  secrets:\n  - name: app\n    provider: vault\n    format: edn\n"
+                "    secret-path: app/config\n\n"
+                "secrets:\n  config.edn:\n    x-compoje:\n      from: secrets.app\n      format: edn\n")
+           new-text))
+    (testing "the in-memory secret has the content local-path wrote"
+      (let [content {:client_id "id" :client_secret "s3cret"}
+            [obj] (stack/managed-objects (yaml/load new-text) {:context {:secrets {:app content}}
+                                                               :stack-name "app"})]
+        (is (= (providers/secret-content {:content content :format "edn"}) (:data obj)))))))
 
 (deftest convert-reverts-unlocatable-edits
   (testing "flow-style definitions can't be edited by line; reported, text unchanged"
