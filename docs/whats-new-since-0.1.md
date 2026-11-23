@@ -18,7 +18,7 @@ A summary for users of compoje 0.1 (2023) moving to 0.6.0. It covers everything 
 ## Upgrading a 0.1 stack
 
 1. **Install 0.6.0**, see [install.md](install.md). For a bb task, pin the tag in your bb.edn:
-   `{:git/tag "v0.5.0" :git/sha "6f150439249e0343c59bb78db7b6f144a92309ae"}`.
+   `{:git/tag "v0.6.0" :git/sha "b1672749a05442ab9c6787c1ca838aaab5d3c3b1"}`.
 2. **Remove aero tags from compoje.edn.** `#env`, `#or`, `#profile` and the like have no equivalent in `x-compoje`.
    Replace them with literal values. For values that change per environment, use `--set` or a secret provider.
 3. **Run `bb compoje migrate --dry-run <dir>`**, check the output, then run it without `--dry-run`. It:
