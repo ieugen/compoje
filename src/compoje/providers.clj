@@ -5,6 +5,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
+            [compoje.files :as files]
             [compoje.utils :as u]))
 
 (def ^:private provider-types (atom {}))
@@ -116,13 +117,15 @@
   ([secret-spec]
    (secret->file! (System/getProperty "user.dir") secret-spec))
   ([base-dir {:keys [local-path content] :as secret-spec}]
-   ;; TODO: Also during dry-run, avoid writing secrets as files, just log ?!
-   ;; TODO: Compute hash for secret to avoid needing a file on disk for hash
    (if local-path
      (let [path (-> (fs/file base-dir local-path) fs/absolutize fs/file)]
-       (fs/create-dirs (fs/parent path))
-       (log/trace "Write secret to" (str path))
-       (spit path (secret-content secret-spec)))
+       (if (files/virtual?)
+         ;; dry run: keep it in memory, file-hash and friends read it from there
+         (do (log/info "Dry run: would write secret" (:name secret-spec) "to" (str path))
+             (files/write! path (secret-content secret-spec)))
+         (do (fs/create-dirs (fs/parent path))
+             (log/trace "Write secret to" (str path))
+             (spit path (secret-content secret-spec)))))
      (log/trace "Skip writing secret. Missing :local-path option."))
    content))
 

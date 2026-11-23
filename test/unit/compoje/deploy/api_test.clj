@@ -6,6 +6,8 @@
             [clojure.test :refer [deftest is testing]]
             [compoje.deploy.api :as api]
             [compoje.deploy.swarm-convert :as c]
+            [compoje.files :as files]
+            [taoensso.timbre :as timbre]
             [unit.compoje.docker.fake-server :as fake]))
 
 (def stack
@@ -43,15 +45,15 @@
          dir (str (babashka.fs/create-temp-dir))]
      (spit (str (babashka.fs/path dir "app.conf")) "listen 80;")
      (try
-       (api/deploy! stack (merge {:endpoint {:scheme :tcp :host "127.0.0.1" :port port
-                                             :allow-insecure-tcp true :host-url "tcp://fake"}
-                                  :objects [{:kind :secret :key "pw" :name "web_pw-abc" :data "s3cret"
-                                             :labels {"com.docker.stack.namespace" "web"}}]
-                                  :template-dir dir
-                                  :docker-config {}}
-                                 (dissoc opts :docker)
-                                 {:docker (merge {:stack "web" :resolve-image "never" :with-registry-auth false}
-                                                 (:docker opts))}))
+       (api/deploy! (or (:stack-data opts) stack) (merge {:endpoint {:scheme :tcp :host "127.0.0.1" :port port
+                                                                     :allow-insecure-tcp true :host-url "tcp://fake"}
+                                                          :objects [{:kind :secret :key "pw" :name "web_pw-abc" :data "s3cret"
+                                                                     :labels {"com.docker.stack.namespace" "web"}}]
+                                                          :template-dir dir
+                                                          :docker-config {}}
+                                                         (dissoc opts :docker :stack-data)
+                                                         {:docker (merge {:stack "web" :resolve-image "never" :with-registry-auth false}
+                                                                         (:docker opts))}))
        @requests
        (finally (stop))))))
 
@@ -200,3 +202,67 @@
       (is (nil? (request (run {} extra) #"DELETE "))))
     (testing "dry run: only logged"
       (is (nil? (request (run {:docker {:prune true} :dry-run true} extra) #"DELETE "))))))
+
+(deftest dry-run-reads-virtual-files
+  (testing "a file: config written only in memory (dry run of a local-path secret) is read from there"
+    (let [dir (str (babashka.fs/create-temp-dir))
+          conf (str (babashka.fs/path dir "app.conf"))]
+      (binding [files/*virtual-files* (atom {})]
+        (files/write! conf "virtual;")
+        (is (empty? (posts (run {:dry-run true :template-dir dir})))))
+      (is (not (babashka.fs/exists? conf))))))
+
+;; ------------------------------------------------------------------ existing file: secrets/configs
+
+(defn- logged
+  "Messages logged while running `f`, and its result: [msgs result]."
+  [f]
+  (let [msgs (atom [])
+        ;; binding *config*: bb's timbre has no with-merged-config
+        result (binding [timbre/*config*
+                         (-> timbre/*config*
+                             (assoc :min-level :info)
+                             (assoc-in [:appenders :capture]
+                                       {:enabled? true :fn (fn [d] (swap! msgs conj (force (:msg_ d))))}))]
+                 (f))]
+    [@msgs result]))
+
+(defn- existing-config [data]
+  (fake/response 200 (json/generate-string
+                      [{"ID" "c-old" "Version" {"Index" 3}
+                        "Spec" {"Name" "web_conf" "Data" data "Labels" {"com.docker.stack.namespace" "web"}}}])))
+
+(def same-conf "bGlzdGVuIDgwOw==") ; base64 of the fixture's "listen 80;"
+
+(deftest existing-configs
+  (testing "same data and labels: unchanged, no update request, the service uses it"
+    (let [[msgs reqs] (logged #(run {} {#"GET /v1.47/configs\?" (existing-config same-conf)}))]
+      (is (nil? (request reqs #"POST /v1.47/configs/")))
+      (is (= "c-old" (get-in (created-spec reqs) ["TaskTemplate" "ContainerSpec" "Configs" 0 "ConfigID"])))
+      (is (some #{"Unchanged config web_conf"} msgs))))
+  (testing "changed data, dry run: a warning that the deploy would fail"
+    (let [[msgs reqs] (logged #(run {:dry-run true} {#"GET /v1.47/configs\?" (existing-config "b3RoZXI=")}))]
+      (is (empty? (posts reqs)))
+      (is (some #(re-find #"^Dry run: The content of config web_conf \(app.conf\) changed.*The deploy would fail\.$" %) msgs))))
+  (testing "changed data, real deploy: the update is sent (Docker refuses it, as with docker stack deploy)"
+    (let [reqs (run {} {#"GET /v1.47/configs\?" (existing-config "b3RoZXI=")
+                        #"POST /v1.47/configs/c-old/update" (fake/response 200 "")})]
+      (is (request reqs #"POST /v1.47/configs/c-old/update")))))
+
+(def file-secret-stack
+  (c/parse-stack (str "services:\n  web:\n    image: docker.io/nginx:stable\n    secrets: [tok]\n"
+                      "secrets:\n  tok:\n    file: app.conf\n")))
+
+(deftest existing-file-secrets
+  (let [extra {#"GET /v1.47/secrets\?" (fake/response 200 (json/generate-string
+                                                           [{"ID" "s-old" "Version" {"Index" 5}
+                                                             "Spec" {"Name" "web_tok" "Labels" {}}}]))
+               #"POST /v1.47/secrets/s-old/update" (fake/response 200 "")}]
+    (testing "dry run: says only the labels are updated, and that Docker keeps the data"
+      (let [[msgs _] (logged #(run {:dry-run true :stack-data file-secret-stack :objects []} extra))]
+        (is (some #{"Would update labels of secret web_tok (Docker keeps the data; the deploy fails if the file changed)"}
+                  msgs))))
+    (testing "real deploy: a labels update"
+      (let [[msgs reqs] (logged #(run {:stack-data file-secret-stack :objects []} extra))]
+        (is (request reqs #"POST /v1.47/secrets/s-old/update"))
+        (is (some #{"Updating labels of secret web_tok"} msgs))))))

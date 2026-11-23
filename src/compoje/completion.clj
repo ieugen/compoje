@@ -80,7 +80,7 @@
 (def config-paths
   "--set completion: x-compoje paths (the user types =value after them)."
   ["docker.stack" "docker.context" "docker.prune" "docker.resolve-image" "docker.with-registry-auth"
-   "docker.driver" "docker.ssh-mode" "docker.allow-insecure-tcp" "values."])
+   "docker.driver" "docker.ssh-mode" "docker.allow-insecure-tcp" "render.undefined" "values."])
 
 ;; ------------------------------------------------------------------ bash
 

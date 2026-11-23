@@ -96,8 +96,23 @@ x-compoje:
         memory: 50M
 ```
 
+### `render`
+
+How the template is rendered.
+
+| Key | Default | Meaning | Flag |
+|---|---|---|---|
+| `undefined` | `error` | What an undefined `secrets.` variable does (see [Template variables](#template-variables)): `error` stops `deploy` and `render`; `warn` renders it empty and logs a warning. | `--allow-undefined` (= `warn`) |
+
+```yaml
+x-compoje:
+  render:
+    undefined: warn   # keep deploying while secrets are being added to the provider
+```
+
 Any other key under `x-compoje:` is kept too, and is available in the template under its own name. compoje warns
-about it (with a "did you mean" when it looks like a typo of `docker`, `providers`, `secrets` or `values`).
+about it (with a "did you mean" when it looks like a typo of `docker`, `providers`, `secrets`, `values` or
+`render`).
 
 ## Validation
 
@@ -141,6 +156,10 @@ secrets:
     x-compoje:
       from: secrets.app                    # a whole provider result (a map) ...
       format: edn                          # ... written as an EDN (or JSON) file
+  grafana_ini:
+    x-compoje:
+      from: secrets.monitoring             # a key with dots in its name:
+      key: grafana.ini                     # from the map, take this entry
 
 configs:
   app_conf:
@@ -151,6 +170,7 @@ configs:
 | Key | Meaning |
 |---|---|
 | `from` | A dotted path in the [rendering context](#the-rendering-context): `secrets.app.db_password` is key `db_password` of secret `app`. Strings are used as they are; numbers and booleans become strings; maps and lists need `format`. |
+| `key` | Optional, with `from`: take this entry of the map at `from`. For keys with dots, which a dotted `from` path can't express: `from: secrets.monitoring` + `key: grafana.ini`. Tried as written, then as a keyword. Quote keys YAML would read as a number or boolean (`"1.0"`). |
 | `format` | Optional, with `from`: `edn` (pretty-printed) or `json`. Writes the value in that format, whatever its type, e.g. a Vault secret's key/value map as an EDN config file. The same output as a provider's legacy `local-path` with `format`. |
 | `template` | A template file, relative to the stack directory, rendered with the same context and syntax as the stack ([templates.md](templates.md)). Mostly for configs. |
 
@@ -192,6 +212,10 @@ Before rendering, `deploy` and `render` also check the variables used in `<{ }>`
 - an undefined `secrets.<name>...` path, or a reference to a secret without `secrets.` (`<{ app.x }>`), is an
   error: an empty secret is never what you want;
 - any other undefined variable is a warning. Add `|default:"..."` when an empty or default value is intended.
+
+To deploy anyway while the provider data is being fixed, pass `--allow-undefined` or set
+[`render.undefined: warn`](#render): the `secrets.` errors become warnings and the variables render empty. The flag
+wins over the stack file.
 
 ## Precedence
 

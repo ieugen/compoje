@@ -47,6 +47,7 @@ Deploys a stack file (a compose file with an `x-compoje:` section, see [configur
 | `--[no-]with-registry-auth` | Send registry credentials to the swarm agents. On by default. |
 | `--dry-run` | Print the docker command and the context (on stderr, provider results shown as `<redacted>`), and the rendered stack (on stdout). Deploys nothing. |
 | `--show-secrets` | With `--dry-run`: show the provider results in the printed context. |
+| `--allow-undefined` | Undefined `secrets.` template variables render empty with a warning instead of failing. Overrides `render.undefined`, see [configuration.md](configuration.md#template-variables). |
 | `-s`, `--set PATH=VALUE` | Override a config value, e.g. `--set values.replicas=2`. Repeatable. See [configuration.md](configuration.md#overriding-values-with---set). |
 
 The docker command it runs looks like this:
@@ -66,9 +67,10 @@ Notes:
 
 - The stack file you pass is the template that is rendered; its name doesn't matter (`stack.tpl.yml` is the
   convention). Paths in it are relative to its directory.
-- `--dry-run` still runs the providers, and providers with the legacy `local-path` still write their files
-  ([known issue](known-issues.md#provider-local-path-files-are-written-on---dry-run)). It lists the in-memory
-  secrets and configs it would create, without their content.
+- `--dry-run` still runs the providers, but writes no files: the content for a legacy `local-path` is kept in
+  memory (`Dry run: would write secret ... to ...`), and `file-hash`, `hash-file` and the `docker-api` engine read
+  it from there, so names and hashes are those of a real run. It lists the in-memory secrets and configs it would
+  create, without their content.
 - The rendered stack (stdout of `--dry-run`) contains every value the template uses, secrets included.
 - Logs go to stderr and data to stdout, so `bb compoje deploy --dry-run x.yml > out.yml` saves just the stack.
 
@@ -123,6 +125,7 @@ bb compoje render -o /tmp/web.yml stacks/web/stack.tpl.yml
 | `-o`, `--output FILE` | Write the stack to `FILE` instead of stdout (`-` means stdout). |
 | `--stack NAME` | Stack name, as for `deploy`. |
 | `-s`, `--set PATH=VALUE` | Override a config value, as for `deploy`. |
+| `--allow-undefined` | As for `deploy`. |
 
 The output contains the values the template uses, secrets included. Don't commit it, and remove files written
 with `--output` when you are done.
@@ -142,6 +145,9 @@ Upgrades a stack directory to the current format. Two steps, each when it applie
 3. **Secrets written to files → secrets from memory**: definitions that read a provider's `local-path` file become
    `x-compoje: {from: ...}`, so secrets are no longer written to disk. Secrets that can't be converted safely are
    left as they are and reported.
+
+Secrets without a name (allowed by `compoje.edn`) are named after their `local-path` file. The result is validated
+like `deploy` does; if it isn't valid, `migrate` prints the errors and exits with status 1.
 
 | Flag | Meaning |
 |---|---|

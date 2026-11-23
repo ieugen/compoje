@@ -112,6 +112,24 @@ Replace each tag in `compoje.edn`, then run `migrate` again:
 - **Secrets**: fetch them with a secret provider (HashiCorp Vault or [ansible-vault](ansible-vault.md)) instead of
   environment variables.
 
+## Secrets without a name
+
+`compoje.edn` accepted a secret without `:name`; `x-compoje` requires one, because templates and `from:` paths use
+it (`secrets.<name>`). `migrate` names such a secret after its `local-path` file (else `file`, else `secret-path`),
+without the extension: `secrets/appsettings.json` → `appsettings`, made unique if needed. The `name:` line is added
+to the template text, also for stacks already migrated to `x-compoje`:
+
+```text
+Secret #1 had no name, which the x-compoje format requires; named it appsettings.
+```
+
+## Checking the result
+
+After migrating, `migrate` validates the new `x-compoje` section exactly like `deploy` does. If it is not valid
+(e.g. a secret refers to a provider that isn't declared), the errors are printed, `migrate` exits with status 1, and
+you fix `stack.tpl.yml` by hand. Template variables are not checked (that needs the secret providers): run
+`bb compoje render <dir>/stack.tpl.yml` or `deploy --dry-run` for that.
+
 ## Secrets written to files
 
 Older stacks gave a secret to a service by writing it to a file with `local-path` and pointing a Docker secret's
@@ -163,6 +181,8 @@ How it works:
   that path as its `file:`.
 - The definition becomes `x-compoje: {from: secrets.<secret>.<spit-key>}`, or `{from: secrets.<secret>}` when the whole result is
   a string (file provider with a raw file, ansible-vault with `format: raw`).
+- A `spit-key` with dots (`grafana.ini`, `cert.key`) can't be a `from:` path segment, so it becomes
+  `{from: secrets.<secret>, key: "grafana.ini"}`.
 - Without `spit-key`, a secret with `format: edn` or `format: json` wrote its whole result in that format. Its
   definition becomes `x-compoje: {from: secrets.<secret>, format: edn}` (or `json`), which creates the same content
   from memory. The secret keeps its `format`.
@@ -171,15 +191,19 @@ How it works:
   `name:` and `labels:` are kept. Other keys are dropped and listed.
 - The template is edited as text, so comments and layout stay. Each edit is checked by parsing the result; if it
   doesn't match, the edit is undone and reported.
+- A `local-path` whose file nothing in the stack uses (the template reads the secret only through
+  `<{ secrets.<name>... }>`) is removed, together with `spit-key`. The file was written for nothing. "Uses" means
+  the path or its file name appears anywhere in the stack file outside the `x-compoje` secret declarations, or in an
+  `x-compoje: {template: ...}` file.
 - Old plaintext files are listed, never deleted. Delete them yourself once the new deploy works.
 
 Secrets that can't be converted safely are left as they are, and the reason is printed:
 
 | Reason | What to do |
 |---|---|
-| `spit-key` contains a dot (`cert.key`) | `from:` paths split on dots. Rename the key in the secret source (`cert_key`), or keep `local-path`. |
+| The secret name contains a dot | `from:` paths split on dots. Rename the secret (and its `secrets.` references). |
 | No `spit-key`, no `format: edn`/`json`, and the result is a map | Add `spit-key`, or write `x-compoje: {from: secrets.<name>.<key>}` (one value) or `{from: secrets.<name>, format: edn}` (the whole map) by hand. |
-| `local-path` is not used as a `file:` of a secret or config | It may feed something else (a bind mount, another tool); left as is. |
+| `local-path` is not a `file:` of a secret or config, but the file is used elsewhere (the report gives the line) | It feeds something else, e.g. a bind mount or `env_file`; left as is. |
 | The file is also used elsewhere in the template | E.g. a `file-path` tag or a volume. Edit by hand. |
 | Could not locate the definitions in the text | Flow style (`secrets: {pw: {file: x}}`) or unusual layout. Edit by hand. |
 
@@ -210,5 +234,5 @@ write secrets.<name>...".
 | `... already has an x-compoje section, and .../compoje.edn exists too.` | Both formats are present. Merge them by hand, or delete `compoje.edn`. |
 | `Nothing to migrate: .../compoje.edn is missing and ... has no x-compoje section.` | Not a compoje stack directory. |
 | `Missing .../stack.tpl.yml` | `migrate` needs the template in the directory. |
-| `... is not valid YAML before rendering` | The template must parse as YAML (see [templates.md](templates.md#control-flow)). |
+| `Secrets not migrated: ... is not valid YAML before rendering (...)` | A warning, not a failure: `compoje.edn` was still moved into `x-compoje`, but the secret steps need the template as YAML (see [templates.md](templates.md#control-flow)). Fix it, e.g. remove an Ansible `!unsafe` tag, delete `compoje.edn`, then run `migrate` again. |
 | `Not a directory: ...` | Pass the stack directory, not a file. |

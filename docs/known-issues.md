@@ -3,15 +3,6 @@
 Open problems that were found but deliberately left for later review.
 When one is fixed, remove it here and add a line to CHANGELOG.md under `[Unreleased] → Fixed`.
 
-## Provider `local-path` files are written on `--dry-run`
-
-Found 2026-11-21.
-
-`compoje.providers/secret->file!` writes decrypted secrets to `local-path` on every run, including `--dry-run`
-(there is a TODO in the code). All built-in providers use it. `local-path` is now legacy: `x-compoje.from` secrets
-need no files. Not skipped on dry-run, because stacks using `local-path` usually `file-hash` the written file, and
-the render would fail without it.
-
 ## `example01.yml` fixture has no known password
 
 Found 2026-11-21.

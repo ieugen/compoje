@@ -5,6 +5,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- `docker-api` engine, file-based secrets and configs that already exist: a config with the same content and labels is left alone (`Unchanged config ...`, no update request); a config whose content changed is reported on `--dry-run` (the deploy would fail); for secrets, whose content Docker never returns, the messages say only the labels are updated (`Would update labels of secret ...`). Before, every existing one was reported as `Would update`.
+- `migrate` on a template that isn't valid YAML (e.g. an Ansible `!unsafe` tag) still moves `compoje.edn` into `x-compoje`, and only skips the secret steps, with a warning saying why. It used to stop with an error and do nothing.
+- `migrate` removes a `local-path` (and `spit-key`) whose file nothing in the stack uses, e.g. when the template reads the secret only through `<{ secrets.<name>... }>`, instead of leaving it to write a plaintext file on every deploy. When the file is used elsewhere (a bind mount, an `x-compoje` template file), it is kept and the report says where.
+
+### Fixed
+- `deploy --dry-run` printed the stack file in the context as `#object[java.io.File ...]`; it is a path string now.
+- `migrate` copied a compoje.edn secret without `:name` as is, so `deploy` then rejected the stack (`secrets[0].name: missing required key`), and reported it as `Skipped secret  (...)` with an empty name. It now names such secrets after their `local-path` file (`secrets/appsettings.json` → `appsettings`), also in stacks already migrated to `x-compoje`, and converts them like the others. `migrate` also validates its result like `deploy` does, and exits with status 1 when it is invalid.
+- `deploy --dry-run` wrote provider `local-path` files (plaintext secrets) to disk. It now keeps their content in memory and logs `Dry run: would write secret <name> to <path>`; `file-hash`, `hash-file` and the `docker-api` engine read the in-memory content, so the dry run shows the same names and hashes as a real deploy. `render` and `deploy` still write the files.
+
+### Added
+- In-memory secrets and configs take `key:` next to `from:`, for map entries whose names contain dots (`grafana.ini`, `alertmanager.yml`), which a dotted `from` path can't express: `x-compoje: {from: secrets.monitoring, key: grafana.ini}`. `migrate` now converts `local-path` secrets with such a `spit-key` this way instead of skipping them.
+- `--allow-undefined` (`deploy`, `render`) and `x-compoje render.undefined: error|warn`: undefined `secrets.` template variables render empty with a warning instead of failing, so stacks whose provider data is incomplete can still deploy while it is fixed. The flag wins over the stack file. See docs/configuration.md, "Template variables".
+
 ## [0.6.1] - 2026-11-23
 
 ### Fixed

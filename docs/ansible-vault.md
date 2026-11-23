@@ -80,7 +80,7 @@ An empty or missing password is an error.
 ### Security notes
 
 - Docker secrets declared with `x-compoje.from` never touch the disk.
-- Legacy `local-path` files contain decrypted secrets. They are written on every run, including `--dry-run`.
+- Legacy `local-path` files contain decrypted secrets. They are written on every `deploy` and `render` (not on `deploy --dry-run`).
   Keep them out of version control (the example's `.gitignore` excludes `generated/`).
 - Values used in the template end up decrypted in the rendered stack. compoje passes it to docker on stdin and
   doesn't write it to disk, but `render` and `deploy --dry-run` print it. In the context printed by `--dry-run`,

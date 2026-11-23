@@ -2,6 +2,7 @@
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
             [clojure.string :as str]
+            [compoje.files :as files]
             [compoje.utils :as u]
             [clojure.tools.logging :as log]
             [selmer.filters :refer [add-filter!]]
@@ -25,7 +26,7 @@
    (hash-file file-name "md5"))
   ([file-name digest]
    (let [digest (or digest "md5")
-         contents (slurp file-name)]
+         contents (files/read-file file-name)]
      (hash-string contents digest))))
 
 (add-filter! :hash-file hash-file)

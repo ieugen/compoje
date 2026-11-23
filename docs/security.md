@@ -15,7 +15,7 @@ You write something to disk only when you ask for it:
 
 - `compoje render -o FILE` writes the rendered stack, including any secret value the template uses. Delete the file
   when you are done; it is never committed by compoje, but `.gitignore` it anyway (`*.generated.yml`).
-- Legacy provider `local-path` writes a secret in plain text, on every run including `--dry-run`. Replace it with
+- Legacy provider `local-path` writes a secret in plain text on every `deploy` and `render` (`deploy --dry-run` keeps it in memory). Replace it with
   `x-compoje: {from: ...}`; `compoje migrate <dir>` converts it for you
   ([migrate-from-compoje-edn.md](migrate-from-compoje-edn.md#secrets-written-to-files)) and lists the old files to
   delete.

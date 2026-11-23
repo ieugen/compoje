@@ -95,7 +95,7 @@ Configs work the same way, and can also be a template rendered in memory. See
 ### Writing secrets to files (legacy)
 
 `local-path` writes a provider result to a file, which a compose `file:` definition can then use. The file contains the
-secret in plain text, and it is written on `--dry-run` too. Use `x-compoje.from` instead. If you still use
+secret in plain text, and it is written on every `deploy` and `render` (not on `deploy --dry-run`). Use `x-compoje.from` instead. If you still use
 `local-path`, keep the files out of git, e.g. with a `generated/` entry in `.gitignore`.
 
 ## ansible-vault

@@ -48,7 +48,7 @@ A summary for users of compoje 0.1 (2023) moving to 0.6.1. It covers everything 
 | YAML 1.2: `yes`, `no`, `on`, `off` stay strings, not booleans | 0.2.0 | Write `true` / `false`. |
 | Strict CLI flags (lambdaisland/cli); unknown flags are an error, `--deploy-driver` takes a value | 0.2.0 | Check scripts that call compoje. `--help` works on every command. |
 | `deploy` no longer writes `stack.generated.yml`; the rendered stack goes to docker on stdin | 0.3.0 | Use `compoje render [-o FILE]` to look at the result. `docker.compose-file` is ignored. |
-| Undefined `secrets.` paths in templates fail `deploy` and `render` (other undefined variables warn) | 0.4.0 | Fix the reference, or use `\|default`. |
+| Undefined `secrets.` paths in templates fail `deploy` and `render` (other undefined variables warn) | 0.4.0 | Fix the reference, or use `\|default`. To deploy anyway while fixing the data: `--allow-undefined` or `render.undefined: warn` (0.6.2). |
 | Default engine is `docker-api`, not `docker stack deploy`; its `--dry-run` reads from the swarm | 0.5.0 | Set `docker.driver: docker-cli` or pass `--deploy-driver docker-cli` where needed. |
 | `prune` is on by default: services of the stack that are no longer in the file are removed | 0.6.0 | Pass `--no-prune` or set `docker.prune: false` to keep them. |
 

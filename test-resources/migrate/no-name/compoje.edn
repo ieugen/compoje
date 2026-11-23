@@ -1,0 +1,10 @@
+;; like doclabel/janssen/dev: the old format allowed a secret without :name
+{:docker {:stack "janssen"}
+ :providers [{:name :dre-vault
+              :type :compoje.providers.vault/vault
+              :addr "https://vault.example.com:8200"}]
+ :secrets [{:provider :dre-vault
+            :local-path "secrets/appsettings.json"
+            :format "json"
+            :mount-path "DocLabel"
+            :secret-path "Janssen/dev/appsettings.json"}]}

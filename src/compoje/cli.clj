@@ -2,6 +2,7 @@
   "Command line interface for compoje, built on lambdaisland/cli."
   (:require [babashka.fs :as fs]
             [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [compoje.completion :as completion]
@@ -11,6 +12,7 @@
             [compoje.deploy.docker :as docker]
             [compoje.deploy.swarm-convert :as swarm-convert]
             [compoje.docker.endpoint :as endpoint]
+            [compoje.files :as files]
             [compoje.init :as init]
             [compoje.logging :as clog]
             [compoje.migrate :as migrate]
@@ -119,7 +121,8 @@
    Undefined variables render as empty strings, so: a `secrets.` path or a
    top-level reference to a declared secret is an error (an empty secret is
    never intended); any other undefined variable is a warning. Returns the
-   warnings; throws with all errors."
+   warnings; throws with all errors. With x-compoje render.undefined \"warn\"
+   (or --allow-undefined) the errors are warnings too."
   [template-file text context]
   (let [secret-names (set (map name (keys (:secrets context))))
         undefined (render/undefined-variables text context)
@@ -130,13 +133,17 @@
                         (if (seq secret-names) (str/join ", " (sort secret-names)) "none declared") ")")
                    (str v ": provider results are under secrets; write secrets." v
                         " (compoje migrate rewrites old references)")))]
-    (when (seq errors)
+    (when (and (seq errors) (not= "warn" (some-> (get-in context [:render :undefined]) name)))
       (throw (ex-info (str "Undefined template variables in " template-file
-                           " (they would render empty):\n  " (str/join "\n  " errors))
+                           " (they would render empty; --allow-undefined renders them empty with a warning):\n  "
+                           (str/join "\n  " errors))
                       {:file (str template-file)})))
-    (vec (for [v undefined :when (not (error? v))]
-           (str template-file ": template variable " v " is not defined; it renders empty"
-                " (add |default:\"...\" if that is intended)")))))
+    (vec (concat
+          (for [e errors]
+            (str template-file ": " e "; it renders empty (allowed by --allow-undefined / render.undefined: warn)"))
+          (for [v undefined :when (not (error? v))]
+            (str template-file ": template variable " v " is not defined; it renders empty"
+                 " (add |default:\"...\" if that is intended)"))))))
 
 (defn- render-stack
   "Build the context (providers included) and render the stack template.
@@ -145,7 +152,9 @@
   (set-hooman-logging! verbosity)
   (register-default-providers!)
   (log/debug "Providers are" (providers/registered-providers))
-  (let [context (deploy-context opts)
+  (let [context (cond-> (deploy-context opts)
+                  ;; the flag wins over x-compoje render.undefined
+                  (:allow-undefined opts) (assoc-in [:render :undefined] "warn"))
         ;; the stack file is the template: render the file that was passed
         template-file (str (:config-file context))]
     (log/trace "Context" context)
@@ -231,13 +240,28 @@
                    "config.json")]
     (if (fs/exists? f) (json/parse-string (slurp (str f))) {})))
 
-(defn- printable-context [context show-secrets]
-  (u/pprint-str (cond-> context (not show-secrets) context/redact-secrets)))
+(defn printable-context
+  "The context as text for --dry-run: provider results redacted unless
+   `show-secrets`, file objects as path strings."
+  [context show-secrets]
+  (u/pprint-str (cond-> (update-vals context #(if (instance? java.io.File %) (str %) %))
+                  (not show-secrets) context/redact-secrets)))
+
+^:rct/test
+(comment
+  (edn/read-string
+   (printable-context {:config-file (java.io.File. "s/stack.tpl.yml") :secrets {:a {:pw "x"}}} false))
+  ;=> {:config-file "s/stack.tpl.yml" :secrets {:a "<redacted>"}}
+  )
 
 (def ^:private shared-flags
   ["--stack STACK" "Stack name. Overrides x-compoje docker.stack."
    "-s, --set <override>" {:doc "Override a config value: --set path.in.config=value. Repeatable."
-                           :coll? true}])
+                           :coll? true}
+   "--allow-undefined" {:doc "Undefined secrets.* template variables render empty with a warning instead of failing. Overrides x-compoje render.undefined."
+                        :value true}])
+
+(declare ^:private deploy*)
 
 (defn deploy
   "Deploy a stack template to a Docker Swarm cluster.
@@ -255,6 +279,13 @@
                               :value true}
                  "--show-secrets" {:doc "With --dry-run: show provider results in the printed context."
                                    :value true}])}
+  [{:keys [dry-run] :as opts}]
+  ;; a dry run writes nothing: local-path files stay in memory
+  (binding [files/*virtual-files* (when dry-run (atom {}))]
+    (deploy* opts))
+  ::done)
+
+(defn- deploy*
   [{:keys [dry-run show-secrets] :as opts}]
   (let [[context contents] (render-stack opts)
         {:keys [template-dir docker]} context
@@ -306,17 +337,29 @@
 
 (defn- migrate-report
   "Human-readable lines about a migrate! result."
-  [{:keys [file changed edn secret-refs template-files converted skipped plaintext-files]} dry-run]
+  [{:keys [file changed edn secret-refs template-files named unnamed converted removed skipped plaintext-files
+           yaml-error]} dry-run]
   (concat
    (when edn ["compoje.edn: config moved into the x-compoje section."])
+   (when yaml-error
+     [(str "Secrets not migrated: " file " is not valid YAML before rendering (" yaml-error
+           "). Fix it (see docs/configuration.md), then run migrate again.")])
+   (for [{:keys [index name]} named]
+     (str "Secret #" (inc index) " had no name, which the x-compoje format requires; named it " name "."))
+   (for [i unnamed]
+     (str "Secret #" (inc i) " has no name, which the x-compoje format requires, and the name could not be added"
+          " to the template text; add name: ... by hand."))
    (when (pos? (or secret-refs 0))
      [(str "Template: " secret-refs " reference(s) to provider results now use secrets.<name>.")])
    (for [{:keys [file refs]} template-files]
      (str file ": " refs " reference(s) to provider results now use secrets.<name>."))
-   (for [{:keys [secret from defs dropped-keys] fmt :format} converted]
+   (for [{:keys [secret from defs dropped-keys key] fmt :format} converted]
      (str "Secret " secret ": " (str/join ", " (map #(str/join "." %) defs))
-          " now created from memory (x-compoje from: " from (when fmt (str ", format: " fmt)) "); local-path removed."
+          " now created from memory (x-compoje from: " from (when key (str ", key: " key))
+          (when fmt (str ", format: " fmt)) "); local-path removed."
           (when (seq dropped-keys) (str " Dropped keys: " (str/join ", " dropped-keys) "."))))
+   (for [{:keys [secret local-path]} removed]
+     (str "Secret " secret ": local-path " local-path " removed; nothing in the stack used that file."))
    (for [{:keys [secret local-path reason]} skipped]
      (str "Skipped secret " secret " (local-path " local-path "): " reason))
    (for [f plaintext-files]
@@ -347,8 +390,13 @@
       (print (:text result))
       (flush))
     (doseq [line (migrate-report result dry-run)]
-      (log/info line)))
-  ::done)
+      (if (str/starts-with? line "Secrets not migrated") (log/warn line) (log/info line)))
+    (if-let [errors (seq (:invalid result))]
+      (do (log/error (str "The migrated x-compoje configuration is not valid; deploy would reject it:\n  "
+                          (str/join "\n  " errors)
+                          "\nFix " (:file result) " by hand. See docs/configuration.md."))
+          ::invalid)
+      ::done)))
 
 (defn init
   "Create a new stack directory.

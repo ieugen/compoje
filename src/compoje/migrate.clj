@@ -9,7 +9,9 @@
             [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.tools.logging :as log]
+            [clojure.walk :as walk]
             [compoje.migrate-secrets :as migrate-secrets]
+            [compoje.schema :as schema]
             [yamlstar.core :as yaml]))
 
 (defn read-edn-config
@@ -116,6 +118,46 @@
                     ["Replace each one with a literal value in compoje.edn (and use --set, or a secret"
                      "provider, for values that differ per environment), then run migrate again."])))
 
+(defn- template-texts
+  "{path text} of the files that stack `text`'s x-compoje: {template: ...}
+   definitions render (they can use a local-path file too). {} when the
+   text doesn't parse."
+  [dir text]
+  (try
+    (into {} (for [[_ defs] (select-keys (yaml/load text) ["secrets" "configs"])
+                   [_ d] defs
+                   :let [t (get-in d ["x-compoje" "template"])]
+                   :when t
+                   :let [f (fs/file dir t)]
+                   :when (fs/exists? f)]
+               [(str t) (slurp f)]))
+    (catch Exception _ {})))
+
+(defn- secret-steps
+  "The steps on the secrets of stack `text` (valid YAML): name unnamed
+   secrets, convert local-path secrets, rewrite 0.3.0 references (also in
+   x-compoje template files)."
+  [dir text]
+  (let [;; old compoje.edn allowed secrets without a name; x-compoje needs one
+        {text :text named :named unnamed :unnamed} (migrate-secrets/add-missing-names text)
+        {:keys [text converted removed skipped]} (migrate-secrets/convert text (template-texts dir text))
+        ;; compoje 0.3.0 stacks referenced provider results at the top level
+        names (for [sec (get-in (yaml/load text) ["x-compoje" "secrets"]) :when (get sec "name")]
+                (str (get sec "name")))
+        [text refs] (migrate-secrets/prefix-secret-refs text names)
+        ;; files rendered with x-compoje: {template: ...} use the same context
+        template-files (vec (for [[_ defs] (select-keys (yaml/load text) ["secrets" "configs"])
+                                  [_ d] defs
+                                  :let [t (get-in d ["x-compoje" "template"])]
+                                  :when t
+                                  :let [f (fs/file dir t)]
+                                  :when (fs/exists? f)
+                                  :let [[new n] (migrate-secrets/prefix-secret-refs (slurp f) names)]
+                                  :when (pos? n)]
+                              {:file (str f) :text new :refs n}))]
+    {:text text :named named :unnamed unnamed :converted converted :removed removed :skipped skipped
+     :refs refs :template-files template-files}))
+
 (defn migrate!
   "Migrate stack directory `dir` (<dir>/stack.tpl.yml). Two steps, each when
    it applies:
@@ -127,7 +169,14 @@
       compoje.migrate-secrets. Secrets that can't be converted safely are
       left as they are and reported.
 
-   Returns {:file :text :changed :edn :converted :skipped :plaintext-files}.
+   Unnamed secrets get a name first (`migrate-secrets/add-missing-names`), and
+   the result is validated like deploy does (:invalid lists the errors).
+
+   When the template isn't valid YAML (e.g. an Ansible `!unsafe` tag), step 1
+   is still done and the secret steps are skipped (:yaml-error says why).
+
+   Returns {:file :text :changed :edn :named :unnamed :converted :removed
+   :skipped :invalid :yaml-error :plaintext-files}.
    Writes stack.tpl.yml only when something changed and not :dry-run."
   [dir {:keys [dry-run]}]
   (let [template-file (fs/file dir "stack.tpl.yml")
@@ -155,26 +204,19 @@
                    (throw (ex-info (str "Nothing to migrate: " edn-file " is missing and "
                                         template-file " has no x-compoje section.")
                                    {:dir (str dir)}))))
-          {:keys [text converted skipped]} (migrate-secrets/convert text)
-          ;; compoje 0.3.0 stacks referenced provider results at the top level
-          names (for [sec (get-in (yaml/load text) ["x-compoje" "secrets"]) :when (get sec "name")]
-                  (str (get sec "name")))
-          [text refs] (migrate-secrets/prefix-secret-refs text names)
-          ;; files rendered with x-compoje: {template: ...} use the same context
-          template-files (vec (for [[_ defs] (select-keys (yaml/load text) ["secrets" "configs"])
-                                    [_ d] defs
-                                    :let [t (get-in d ["x-compoje" "template"])]
-                                    :when t
-                                    :let [f (fs/file dir t)]
-                                    :when (fs/exists? f)
-                                    :let [[new n] (migrate-secrets/prefix-secret-refs (slurp f) names)]
-                                    :when (pos? n)]
-                                {:file (str f) :text new :refs n}))
-          plaintext (vec (for [{:keys [local-path]} converted
+          ;; the secret steps need the template as YAML; the compoje.edn step doesn't
+          yaml-error (try (yaml/load text) nil (catch Exception e (ex-message e)))
+          {:keys [text named unnamed converted removed skipped refs template-files]
+           :or {named [] unnamed [] converted [] removed [] skipped [] refs 0 template-files []}}
+          (if yaml-error {:text text} (secret-steps dir text))
+          plaintext (vec (for [{:keys [local-path]} (concat converted removed)
                                :let [f (fs/file dir local-path)]
                                :when (fs/exists? f)]
                            (str f)))
-          changed (boolean (or (not= template text) (seq template-files)))]
+          changed (boolean (or (not= template text) (seq template-files)))
+          ;; the result must pass the validation deploy runs
+          invalid (when-not yaml-error
+                    (:errors (schema/validate (walk/keywordize-keys (get (yaml/load text) "x-compoje")))))]
       (when (and changed (not dry-run))
         (spit template-file text)
         (log/debug "Wrote" (str template-file)))
@@ -186,6 +228,11 @@
        :edn edn?
        :secret-refs refs
        :template-files (mapv #(dissoc % :text) template-files)
+       :named named
+       :unnamed unnamed
        :converted converted
+       :removed removed
        :skipped skipped
+       :invalid invalid
+       :yaml-error yaml-error
        :plaintext-files plaintext})))

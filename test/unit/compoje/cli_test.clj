@@ -186,8 +186,44 @@
         (write! "      JWT: <{ cloud.JWT_SECRET }>\n")
         (is (thrown-with-msg? clojure.lang.ExceptionInfo #"cloud.JWT_SECRET: provider results are under secrets; write secrets.cloud.JWT_SECRET"
                               (cli/render {:stack-file (str stack) :verbosity 0}))))
+      (testing "render.undefined: warn (or --allow-undefined) renders it empty with a warning"
+        (write! "      JWT: \"<{ secrets.cloud.NOPE }>\"\n")
+        (is (str/includes? (with-out-str (cli/render {:stack-file (str stack) :verbosity 0 :allow-undefined true}))
+                           "JWT: \"\""))
+        (let [ctx (assoc (cli/deploy-context {:stack-file (str stack)}) :render {:undefined "warn"})]
+          (is (= [(str stack ": secrets.cloud.NOPE: no such provider result (secrets: cloud); it renders empty"
+                       " (allowed by --allow-undefined / render.undefined: warn)")]
+                 (cli/check-variables (str stack) "<{ secrets.cloud.NOPE }>" ctx))))
+        (spit (str stack) (str/replace (slurp (str stack)) "x-compoje:\n" "x-compoje:\n  render:\n    undefined: warn\n"))
+        (is (str/includes? (with-out-str (cli/render {:stack-file (str stack) :verbosity 0})) "JWT: \"\""))
+        (testing "--set overrides the stack file"
+          (is (thrown-with-msg? clojure.lang.ExceptionInfo #"--allow-undefined renders them empty"
+                                (cli/render {:stack-file (str stack) :verbosity 0 :set ["render.undefined=error"]})))))
       (testing "other undefined variables are warnings; |default is fine"
         (let [ctx (cli/deploy-context {:stack-file (str stack)})]
           (is (= [(str stack ": template variable values.nope is not defined; it renders empty (add |default:\"...\" if that is intended)")]
                  (cli/check-variables (str stack) "<{ values.nope }> <{ values.x|default:\"1\" }>" ctx)))))
+      (finally (fs/delete-tree dir)))))
+
+(deftest dry-run-writes-no-local-path-files
+  (cli/register-default-providers!)
+  (let [dir (fs/create-temp-dir)
+        stack (fs/path dir "stack.tpl.yml")
+        written (fs/path dir "generated/tok.txt")]
+    (spit (str (fs/path dir "tok.txt")) "s3cret\n")
+    (spit (str stack) (str "x-compoje:\n  docker:\n    stack: web\n    driver: docker-cli\n"
+                           "  providers:\n    - name: files\n      type: compoje.providers.file/file\n"
+                           "  secrets:\n    - name: tok\n      provider: files\n      file: tok.txt\n"
+                           "      local-path: generated/tok.txt\n"
+                           "services:\n  a:\n    image: i\n    secrets: [tok]\n"
+                           "secrets:\n  tok:\n    file: generated/tok.txt\n"
+                           "    name: tok_<% file-hash 'generated/tok.txt' %>\n"))
+    (try
+      (testing "--dry-run: nothing written, file-hash hashes the content a real run would write"
+        (let [out (with-out-str (cli/deploy {:stack-file (str stack) :dry-run true :verbosity 0}))]
+          (is (not (fs/exists? written)))
+          (is (str/includes? out (str "name: tok_" (subs (compoje.render/hash-string "s3cret\n" "md5") 0 6))))))
+      (testing "a real run (render) still writes the file"
+        (cli/render {:stack-file (str stack) :verbosity 0 :output (str (fs/path dir "out.yml"))})
+        (is (= "s3cret\n" (slurp (str written)))))
       (finally (fs/delete-tree dir)))))

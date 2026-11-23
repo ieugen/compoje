@@ -8,6 +8,10 @@
        db_password:
          x-compoje:
            from: secrets.app.db_password   # path in the render context
+       grafana_ini:
+         x-compoje:
+           from: secrets.monitoring        # a key with dots: from + key
+           key: grafana.ini
        app_conf:
          x-compoje:
            from: secrets.app               # a map, written as edn (or json)
@@ -66,25 +70,45 @@
   "Values of x-compoje `format`: how a `from:` value is written."
   #{"edn" "json"})
 
+(defn lookup
+  "Value at dotted `path` in the (keyword keyed) context, then, if `k` is
+   given, its entry `k` (a key that may contain dots: tried as a string, then
+   as a keyword, like a provider's spit-key)."
+  [context path k]
+  (let [ks (map keyword (str/split (str path) #"\."))
+        v (get-in context ks ::missing)]
+    (cond
+      (= ::missing v) (throw (ex-info (str "x-compoje from: nothing at context path " path) {:path path}))
+      (nil? k) v
+      (not (map? v)) (throw (ex-info (str "x-compoje key: " path " is not a map, so it has no key " k) {:path path}))
+      (contains? v k) (get v k)
+      (contains? v (keyword k)) (get v (keyword k))
+      :else (throw (ex-info (str "x-compoje key: " path " has no key " k
+                                 " (keys: " (str/join ", " (sort (map #(if (keyword? %) (name %) (str %)) (keys v)))) ")")
+                            {:path path :key k})))))
+
+(defn content
+  "Value `v` as an object's content. Without `fmt`: strings as is, numbers
+   and booleans as strings, anything else is an error. With `fmt` \"edn\" or
+   \"json\": any value, rendered like a provider's local-path file with that
+   format. `where` names the value in errors."
+  [v fmt where]
+  (cond
+    (= "edn" fmt) (u/pprint-str v)
+    (= "json" fmt) (json/generate-string v)
+    (string? v) v
+    (or (number? v) (boolean? v)) (str v)
+    :else (throw (ex-info (str "x-compoje from: " where " is not a string (it is a "
+                               (if (map? v) "map" (type v))
+                               "; use a longer path or key, or format: edn or json)")
+                          {:path where}))))
+
 (defn context-value
-  "Value at dotted `path` in the (keyword keyed) context, as the object's
-   content. Without `fmt`: strings as is, numbers and booleans as strings,
-   anything else is an error. With `fmt` \"edn\" or \"json\": any value,
-   rendered like a provider's local-path file with that format."
-  ([context path] (context-value context path nil))
-  ([context path fmt]
-   (let [ks (map keyword (str/split (str path) #"\."))
-         v (get-in context ks ::missing)]
-     (cond
-       (= ::missing v) (throw (ex-info (str "x-compoje from: nothing at context path " path) {:path path}))
-       (= "edn" fmt) (u/pprint-str v)
-       (= "json" fmt) (json/generate-string v)
-       (string? v) v
-       (or (number? v) (boolean? v)) (str v)
-       :else (throw (ex-info (str "x-compoje from: " path " is not a string (it is a "
-                                  (if (map? v) "map" (type v))
-                                  "; use a longer path, or format: edn or json)")
-                             {:path path}))))))
+  "The object content for x-compoje `from` path (plus optional `k`, `fmt`)."
+  ([context path] (context-value context path nil nil))
+  ([context path fmt] (context-value context path fmt nil))
+  ([context path fmt k]
+   (content (lookup context path k) fmt (cond-> (str path) k (str " key " k)))))
 
 ^:rct/test
 (comment
@@ -96,12 +120,20 @@
   (try (context-value {:app {}} "app.pw") (catch Exception e (ex-message e)))
   ;=> "x-compoje from: nothing at context path app.pw"
   (try (context-value {:app {:db {:pw "x"}}} "app.db") (catch Exception e (ex-message e)))
-  ;=> "x-compoje from: app.db is not a string (it is a map; use a longer path, or format: edn or json)"
+  ;=> "x-compoje from: app.db is not a string (it is a map; use a longer path or key, or format: edn or json)"
+  ;; key: an entry whose name has dots, string or keyword keys
+  (context-value {:secrets {:mon {:grafana.ini "[server]\n"}}} "secrets.mon" nil "grafana.ini") ;=> "[server]\n"
+  (context-value {:secrets {:mon {"alertmanager.yml" "route: {}\n"}}} "secrets.mon" nil "alertmanager.yml") ;=> "route: {}\n"
+  (context-value {:secrets {:mon {:a.json {:x 1}}}} "secrets.mon" "json" "a.json") ;=> "{\"x\":1}"
+  (try (context-value {:secrets {:mon {:a 1 "b.c" 2}}} "secrets.mon" nil "nope.ini") (catch Exception e (ex-message e)))
+  ;=> "x-compoje key: secrets.mon has no key nope.ini (keys: a, b.c)"
+  (try (context-value {:secrets {:mon "text"}} "secrets.mon" nil "x.ini") (catch Exception e (ex-message e)))
+  ;=> "x-compoje key: secrets.mon is not a map, so it has no key x.ini"
   )
 
 (defn- object-data
   [kind k {:strs [file external] :as definition} {:keys [context render-template]}]
-  (let [{:strs [from template] fmt "format" :as xc} (get definition "x-compoje")
+  (let [{:strs [from template] fmt "format" k* "key" :as xc} (get definition "x-compoje")
         where (str (name kind) " " k)]
     (when-not (map? xc)
       (throw (ex-info (str where ": x-compoje must be a map with from or template") {:key k})))
@@ -110,9 +142,10 @@
     (cond
       (and from template) (throw (ex-info (str where ": x-compoje takes from or template, not both") {:key k}))
       (and fmt (not from)) (throw (ex-info (str where ": x-compoje format only applies to from") {:key k}))
+      (and (some? k*) (not from)) (throw (ex-info (str where ": x-compoje key only applies to from") {:key k}))
       (and fmt (not (formats fmt)))
       (throw (ex-info (str where ": x-compoje format must be edn or json, not " fmt) {:key k}))
-      from (context-value context from fmt)
+      from (context-value context from fmt (some-> k* str))
       template (render-template template)
       :else (throw (ex-info (str where ": x-compoje needs from or template") {:key k})))))
 
@@ -179,6 +212,12 @@
   (try (managed-objects {"secrets" {"conf" {"x-compoje" {"from" "app" "format" "yaml"}}}} {:context {:app {}}})
        (catch Exception e (ex-message e)))
   ;=> "secret conf: x-compoje format must be edn or json, not yaml"
+  (:data (first (managed-objects {"secrets" {"g" {"x-compoje" {"from" "secrets.mon" "key" "grafana.ini"}}}}
+                                 {:context {:secrets {:mon {:grafana.ini "[server]"}}} :stack-name "web"})))
+  ;=> "[server]"
+  (try (managed-objects {"configs" {"c" {"x-compoje" {"template" "c.conf" "key" "a.b"}}}} {})
+       (catch Exception e (ex-message e)))
+  ;=> "config c: x-compoje key only applies to from"
   (try (managed-objects {"configs" {"c" {"x-compoje" {"template" "c.conf" "format" "edn"}}}} {})
        (catch Exception e (ex-message e)))
   ;=> "config c: x-compoje format only applies to from"

@@ -10,6 +10,7 @@
             [cheshire.core :as json]
             [clojure.string :as str]
             [compoje.deploy.interpolate :as interpolate]
+            [compoje.files :as files]
             [compoje.deploy.registry-auth :as registry-auth]
             [compoje.deploy.swarm-convert :as convert]
             [compoje.docker.client :as client]
@@ -82,11 +83,27 @@
                                                    {:name name}))))
                     :else
                     (let [path (fs/path template-dir (str file))
-                          spec {"Name" name "Labels" labels "Data" (b64 (fs/read-all-bytes path))}]
+                          spec {"Name" name "Labels" labels "Data" (b64 (files/read-bytes path))}
+                          ;; Docker returns a config's data, never a secret's
+                          same-data? (= (get-in existing ["Spec" "Data"]) (get spec "Data"))
+                          same-labels? (= (or (get-in existing ["Spec" "Labels"]) {}) (or labels {}))
+                          changed-msg (str "The content of " kind " " name " (" file ") changed, but Docker "
+                                           kind "s can't be changed. Give it a new name, e.g. with"
+                                           " <% file-hash '" file "' %> in its name, or use"
+                                           " x-compoje: {from: ...} / {template: ...}.")]
                       (cond
-                        dry-run (do (log/info (if existing "Would update" "Would create") kind name)
-                                    (or (get existing "ID") (str "<new " kind ">")))
-                        existing (do (log/info "Updating" kind name)
+                        (and existing (= kind "config") same-data? same-labels?)
+                        (do (log/info "Unchanged config" name) (get existing "ID"))
+                        (and dry-run (not existing))
+                        (do (log/info "Would create" kind name) (str "<new " kind ">"))
+                        (and dry-run (= kind "config") (not same-data?))
+                        (do (log/warn (str "Dry run: " changed-msg " The deploy would fail.")) (get existing "ID"))
+                        dry-run
+                        (do (log/info (str "Would update labels of " kind " " name
+                                           (when (= kind "secret")
+                                             " (Docker keeps the data; the deploy fails if the file changed)")))
+                            (get existing "ID"))
+                        existing (do (log/info (str "Updating labels of " kind " " name))
                                      ;; like docker stack deploy: the daemon refuses changed data
                                      (try
                                        (client/request conn :post (str "/" kind "s/" (get existing "ID") "/update")
@@ -94,11 +111,7 @@
                                                         :body spec})
                                        (catch clojure.lang.ExceptionInfo e
                                          (if (str/includes? (str (ex-message e)) "only updates to Labels are allowed")
-                                           (throw (ex-info (str "The content of " kind " " name " (" file ") changed, but Docker "
-                                                                kind "s can't be changed. Give it a new name, e.g. with"
-                                                                " <% file-hash '" file "' %> in its name, or use"
-                                                                " x-compoje: {from: ...} / {template: ...}.")
-                                                           {:name name} e))
+                                           (throw (ex-info changed-msg {:name name} e))
                                            (throw e))))
                                      (get existing "ID"))
                         :else (do (log/info "Creating" kind name)

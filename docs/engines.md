@@ -84,8 +84,11 @@ The same steps as `docker stack deploy`:
 3. Creates secrets and configs:
    - in-memory ones ([`x-compoje: {from|template}`](configuration.md#secrets-and-configs-from-memory)) are created
      if missing;
-   - file-based ones are created, or updated when they exist. Docker refuses changed content under the same name,
-     and compoje says how to fix it (`file-hash` in the name, or `x-compoje`).
+   - file-based ones are created when missing. An existing one can only get new labels: Docker refuses changed
+     content under the same name, and compoje says how to fix it (`file-hash` in the name, or `x-compoje`).
+     A config with the same content and labels is left alone (`Unchanged config ...`); a config whose content
+     changed is reported on `--dry-run` already. Docker never returns a secret's content, so for an existing secret
+     compoje can only say `Would update labels of secret ...` and the deploy fails if the file changed.
    - External ones must exist.
 4. Creates or updates the services (`<stack>_<name>`).
 5. Unless `--no-prune`, removes the stack's services that are no longer in the file.

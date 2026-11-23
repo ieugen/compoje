@@ -1,0 +1,11 @@
+services:
+  app:
+    image: "registry.example.com/janssen/app:dev"
+    secrets:
+      - source: appsettings
+        target: /app/appsettings.json
+
+secrets:
+  appsettings:
+    file: secrets/appsettings.json
+    name: janssen_appsettings.json_<% file-hash 'secrets/appsettings.json' %>

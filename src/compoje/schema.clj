@@ -28,6 +28,11 @@
    ;; ignored with a warning since the stack is no longer written to disk
    [:compose-file {:optional true} :any]])
 
+(def Render
+  [:map {:closed true}
+   ;; undefined secrets.* variables: error (default) or warn and render empty
+   [:undefined {:optional true} [:enum "error" "warn"]]])
+
 (def provider-keys
   "Settings of the built-in provider types."
   {"compoje.providers.ansible-vault/ansible-vault"
@@ -75,9 +80,10 @@
    [:docker {:optional true} [:maybe :map]]
    [:providers {:optional true} [:sequential [:map [:name :any] [:type :any]]]]
    [:secrets {:optional true} [:sequential [:map [:name :any] [:provider :any]]]]
-   [:values {:optional true} [:maybe :map]]])
+   [:values {:optional true} [:maybe :map]]
+   [:render {:optional true} [:maybe :map]]])
 
-(def known-keys #{:docker :providers :secrets :values})
+(def known-keys #{:docker :providers :secrets :values :render})
 
 ;; ------------------------------------------------------------------ messages
 
@@ -141,6 +147,7 @@
         errors (concat
                 (explain Config config [])
                 (when (map? (:docker config)) (explain Docker (:docker config) [:docker]))
+                (when (map? (:render config)) (explain Render (:render config) [:render]))
                 (mapcat (fn [i p] (explain (provider-schema (str (:type p))) p [:providers i])) (range) providers)
                 (mapcat (fn [i s]
                           (let [pname (str (:provider s))
@@ -176,6 +183,9 @@
   (:errors (validate {:providers [{:name "f" :type "compoje.providers.file/file"}]
                       :secrets [{:name "a" :provider "f"} {:name "a" :provider "f" :file "x"}]}))
   ;=> ["secret name a is used 2 times" "secrets[0].file: missing required key"]
+  (:errors (validate {:render {:undefined "warn"}})) ;=> []
+  (:errors (validate {:render {:undefined "ignore" :x 1}}))
+  ;=> ["render.undefined: should be either \"error\" or \"warn\"" "render.x: unknown key"]
   (:errors (validate {:providers [{:name "m" :type "my.ns/custom" :anything 1}]
                       :secrets [{:name "s" :provider "m" :whatever 2}]}))
   ;=> []
