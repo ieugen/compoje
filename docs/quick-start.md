@@ -41,7 +41,7 @@ compoje runs as a Babashka task. Create a project directory with a `bb.edn`:
 
 ```clojure
 ;; bb.edn
-{:deps {io.github.ieugen/compoje {:git/tag "v0.6.1" :git/sha "9bd628eff9d579bc40119016d179f02026fe4ee7"}}
+{:deps {io.github.ieugen/compoje {:git/tag "v0.7.0" :git/sha "f5bd0d57062d2014eeb83d3a2e9082bf4dc398af"}}
  :tasks {:requires ([compoje.cli :as cli])
          compoje {:doc "Run compoje."
                   :task (apply cli/main *command-line-args*)}}}
