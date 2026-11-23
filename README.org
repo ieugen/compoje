@@ -68,6 +68,7 @@ bb compoje --help
 bb compoje init my-stack
 
 # Shell completion (see docs/install.md)
+mkdir -p ~/.local/share/bash-completion/completions
 compoje completion bash > ~/.local/share/bash-completion/completions/compoje
 
 # Render and show the stack and the docker command, without deploying

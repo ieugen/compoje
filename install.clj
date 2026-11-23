@@ -123,7 +123,12 @@ Options:
     (if (and (zero? exit) (str/starts-with? out completion-marker))
       (do (fs/create-dirs completions)
           (spit (str f) out)
-          (println "Bash completion ->" (str f) "(open a new shell)"))
+          (println "Bash completion ->" (str f) "(open a new shell)")
+          ;; bash-completion loads this file only for the `compoje` command;
+          ;; `bb compoje ...` needs it loaded at shell start
+          (let [rc (fs/path (fs/home) ".bashrc")]
+            (when-not (and (fs/exists? rc) (str/includes? (slurp (str rc)) (str f)))
+              (println (str "For `bb compoje ...` completion too, add to ~/.bashrc: source " f)))))
       (println "Note: no shell completion installed (this compoje has no `completion` command)."))))
 
 (defn- ours? [f] (and (fs/exists? f) (str/includes? (slurp (str f)) marker)))

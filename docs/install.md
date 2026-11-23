@@ -161,12 +161,19 @@ contexts, config paths for `--set`) and arguments (stack files, directories), fo
 bash-completion package (installed on most Linux distributions), put the script where it is loaded on demand:
 
 ```bash
+mkdir -p ~/.local/share/bash-completion/completions
 compoje completion bash > ~/.local/share/bash-completion/completions/compoje
 ```
 
 **bash, also `bb compoje ...`** (per-project bb task): completing `bb` words needs the script loaded when the shell
 starts, so write it once and source it from `~/.bashrc`. Other `bb` words (task names) still go to bb's own
-completion.
+completion. If you used the quick install, the script is already written; just source it:
+
+```bash
+echo 'source ~/.local/share/bash-completion/completions/compoje' >> ~/.bashrc
+```
+
+Otherwise:
 
 ```bash
 mkdir -p ~/.local/share/compoje
@@ -177,6 +184,7 @@ echo 'source ~/.local/share/compoje/completion.bash' >> ~/.bashrc
 **zsh**: the same script through zsh's bash compatibility (`bashcompinit`):
 
 ```bash
+mkdir -p ~/.zsh
 compoje completion zsh > ~/.zsh/compoje-completion.zsh
 echo 'source ~/.zsh/compoje-completion.zsh' >> ~/.zshrc    # after compinit
 ```

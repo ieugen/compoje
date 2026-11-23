@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Shell completion docs: the commands creating the completion files failed when the target directory didn't exist yet. The installer now says that `bb compoje ...` completion needs the script sourced from `~/.bashrc` (bash-completion loads it on demand only for the `compoje` command).
+
 ## [0.4.0] - 2026-11-23
 
 ### Changed
