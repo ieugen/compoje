@@ -5,7 +5,7 @@
 ;; One line (latest release):
 ;;   bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))'
 ;; With options, after the expression:
-;;   bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))' --version v0.3.0
+;;   bb -e '(load-string (slurp "https://raw.githubusercontent.com/ieugen/compoje/main/install.clj"))' --version v0.5.0
 ;; Or from a checkout: bb install.clj [options]
 ;;
 ;; Run it again to update. See --help and docs/install.md.
@@ -24,7 +24,7 @@
   "Install compoje (https://github.com/ieugen/compoje) as a `compoje` command.
 
 Options:
-  --version TAG   release to install, e.g. v0.3.0 (default: latest; env COMPOJE_VERSION)
+  --version TAG   release to install, e.g. v0.5.0 (default: latest; env COMPOJE_VERSION)
   --dir DIR       where to put the `compoje` command (default: ~/.local/bin; env COMPOJE_INSTALL_DIR)
   --jar-dir DIR   where to keep the jar (default: ~/.local/share/compoje)
   --from PATH|URL install this jar instead of a release download (checked against PATH.sha256 if present)

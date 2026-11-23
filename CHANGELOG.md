@@ -5,8 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-23
+
 ### Changed
 - **Breaking:** the default deploy engine is now `docker-api` (the Docker Engine API, no docker CLI needed), not `docker-cli`. Stacks using compose keys `docker-api` doesn't support now fail with an error naming the key; set `x-compoje docker.driver: docker-cli` or pass `--deploy-driver docker-cli` to keep using `docker stack deploy`. `--dry-run` with `docker-api` reads from the swarm, so it needs a reachable manager. See docs/engines.md.
+- Docs: install examples pin `v0.5.0` (they still showed `v0.2.0`/`v0.3.0`).
 
 ## [0.4.1] - 2026-11-23
 
@@ -109,7 +112,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `--set path.to.key=value` CLI overrides, deep-merged over the file config.
 - Kaocha test setup and cljfmt formatting via babashka.
 
-[Unreleased]: https://github.com/ieugen/compoje/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/ieugen/compoje/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/ieugen/compoje/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/ieugen/compoje/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ieugen/compoje/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ieugen/compoje/compare/v0.2.0...v0.3.0
