@@ -5,11 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-23
+
 ### Changed
 - **Breaking:** `prune` is on by default: `deploy` removes the stack's services that are no longer in the stack file, with both engines. Turn it off with `--no-prune`, `x-compoje docker.prune: false` or `--set docker.prune=false`.
 
 ### Added
-- `deploy` logs the engine and the docker options in effect (context, resolve-image, with-registry-auth, prune), with both engines and on `--dry-run`, e.g. `Deploying stack web with docker-api: context prod, resolve-image always, with-registry-auth true, prune false`.
+- `deploy` logs the engine and the docker options in effect (context, resolve-image, with-registry-auth, prune), with both engines and on `--dry-run`, e.g. `Deploying stack web with docker-api: context prod, resolve-image always, with-registry-auth true, prune true`.
 - Tests for the `docker-api` engine's `--resolve-image` (always/changed/never), `--with-registry-auth` and `--prune` handling.
 
 ### Fixed
@@ -122,7 +124,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `--set path.to.key=value` CLI overrides, deep-merged over the file config.
 - Kaocha test setup and cljfmt formatting via babashka.
 
-[Unreleased]: https://github.com/ieugen/compoje/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/ieugen/compoje/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/ieugen/compoje/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ieugen/compoje/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/ieugen/compoje/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ieugen/compoje/compare/v0.3.0...v0.4.0

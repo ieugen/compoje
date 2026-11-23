@@ -1,7 +1,7 @@
 # What changed since compoje 0.1
 
-A summary for users of compoje 0.1 (2023) moving to 0.5.0. It covers everything that changed in 0.2.0 through
-0.5.0, grouped by topic. [CHANGELOG.md](../CHANGELOG.md) has the full list, release by release.
+A summary for users of compoje 0.1 (2023) moving to 0.6.0. It covers everything that changed in 0.2.0 through
+0.6.0, grouped by topic. [CHANGELOG.md](../CHANGELOG.md) has the full list, release by release.
 
 ## In short
 
@@ -17,7 +17,7 @@ A summary for users of compoje 0.1 (2023) moving to 0.5.0. It covers everything 
 
 ## Upgrading a 0.1 stack
 
-1. **Install 0.5.0**, see [install.md](install.md). For a bb task, pin the tag in your bb.edn:
+1. **Install 0.6.0**, see [install.md](install.md). For a bb task, pin the tag in your bb.edn:
    `{:git/tag "v0.5.0" :git/sha "6f150439249e0343c59bb78db7b6f144a92309ae"}`.
 2. **Remove aero tags from compoje.edn.** `#env`, `#or`, `#profile` and the like have no equivalent in `x-compoje`.
    Replace them with literal values. For values that change per environment, use `--set` or a secret provider.
@@ -50,6 +50,7 @@ A summary for users of compoje 0.1 (2023) moving to 0.5.0. It covers everything 
 | `deploy` no longer writes `stack.generated.yml`; the rendered stack goes to docker on stdin | 0.3.0 | Use `compoje render [-o FILE]` to look at the result. `docker.compose-file` is ignored. |
 | Undefined `secrets.` paths in templates fail `deploy` and `render` (other undefined variables warn) | 0.4.0 | Fix the reference, or use `\|default`. |
 | Default engine is `docker-api`, not `docker stack deploy`; its `--dry-run` reads from the swarm | 0.5.0 | Set `docker.driver: docker-cli` or pass `--deploy-driver docker-cli` where needed. |
+| `prune` is on by default: services of the stack that are no longer in the file are removed | 0.6.0 | Pass `--no-prune` or set `docker.prune: false` to keep them. |
 
 Provider results are under `secrets` in templates (`<{ secrets.<name>.<key> }>`), as in 0.1. 0.3.0 briefly moved
 them to the top level; `migrate` rewrites stacks written for 0.3.0.
@@ -89,7 +90,8 @@ them to the top level; `migrate` rewrites stacks written for 0.3.0.
     keys, which the integration tests check.
   - `docker-cli`: runs `docker stack deploy`, with every compose key Docker supports.
 - The docker settings (`stack`, `context`, `prune`, `resolve-image`, `with-registry-auth`) now reach the deploy.
-  Precedence: defaults < `x-compoje` < `--set` < flags. In 0.1 they were dropped.
+  Precedence: defaults < `x-compoje` < `--set` < flags. In 0.1 they were dropped. `deploy` logs the engine and
+  the options in effect before it deploys.
 
 ### Commands
 
