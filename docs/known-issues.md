@@ -16,7 +16,9 @@ Found 2026-11-22.
 
 `compoje.render/to-yaml` looks the argument up as a top-level context key only: `<% to-yaml values.resources %>`
 renders `null`. Its output is not indented, so only the first line lines up when the tag is used inside a nested
-block.
+block. Together with the YAML check that runs before rendering (below), this means `to-yaml` can't be used in the
+stack file itself, only in config/secret templates (`x-compoje: {template: ...}`). In the stack file, the `yaml`
+filter (`<{ secrets.app|yaml }>`, one line of flow YAML, any path) covers the same need.
 
 ## `hash-file` filter resolves paths against the current directory
 

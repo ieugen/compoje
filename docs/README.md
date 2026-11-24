@@ -20,7 +20,7 @@ content hashes to config and secret names, and deploys it through the Docker API
 - [whats-new-since-0.1.md](whats-new-since-0.1.md): what changed since compoje 0.1, and how to upgrade a 0.1 stack
 - [migrate-from-compoje-edn.md](migrate-from-compoje-edn.md): moving old `compoje.edn` stacks (and 0.3.0 stacks) to the current format
 - [known-issues.md](known-issues.md): known limitations and bugs
-- [../example-stacks/](../example-stacks/): example stacks (nginx, redis, ansible-vault, file)
+- [../example-stacks/](../example-stacks/): example stacks (nginx, redis, ansible-vault, file, to-yaml)
 
 ## Developing compoje
 

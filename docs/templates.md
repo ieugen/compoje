@@ -62,6 +62,7 @@ The rendered stack is still a compose file, so two things can change a value on 
 |---|---|---|
 | `yaml-str` | `"pa$$word: x#y \"q\""` | Any value you don't control: write it unquoted, `KEY: <{ secrets.app.secret\|yaml-str }>`. Quotes and escapes for YAML, and doubles `$`. |
 | `escape-dollar` | `pa$$word: x#y "q"` | Only doubles `$` (docker turns `$$` back into `$`). You do the YAML quoting, e.g. `'<{ x\|escape-dollar }>'` for values without `'`. |
+| `yaml` | `"pa$$word: x#y \"q\""` | Maps and lists (and scalars): one line of flow YAML, every string escaped like `yaml-str`. See [Maps and lists](#maps-and-lists-yaml). |
 
 ```yaml
 environment:
@@ -71,6 +72,29 @@ environment:
 Both give the service the exact value with either engine. For secrets, prefer a Docker secret
 ([`x-compoje: {from: ...}`](configuration.md#secrets-and-configs-from-memory)): the value never goes through the
 YAML, nor docker's substitution, nor `docker service inspect`.
+
+### Maps and lists: `yaml`
+
+`yaml` writes a whole map or list, e.g. a Vault secret, as one line of flow YAML (JSON syntax, which is valid
+YAML), with `$` doubled in every string, keys included. Since it is one line, it fits at any indentation, and the
+stack file stays valid YAML before rendering. Any dotted path works, so you can pick part of a secret:
+
+```yaml
+services:
+  app:
+    environment: <{ secrets.app-env|yaml }>     # the whole provider result
+    labels: <{ secrets.app.labels|yaml }>       # one key of it
+```
+
+With a Vault secret `app-env` holding `{"DB_USER": "app", "DB_PASSWORD": "pa$word"}` this renders as:
+
+```yaml
+    environment: {"DB_USER":"app","DB_PASSWORD":"pa$$word"}
+```
+
+and the service gets `DB_PASSWORD=pa$word`. Environment values must be scalars, so a secret holding nested maps
+fails in docker; point at the part that holds the variables. A runnable example (the file provider standing in
+for Vault) is in [example-stacks/to-yaml/](../example-stacks/to-yaml/).
 
 ## compoje tags
 
@@ -104,14 +128,66 @@ Renders the file's absolute path.
 
 ### `to-yaml`
 
+Writes a context entry as block-style YAML, for whole files such as config templates. In the stack file, use the
+[`yaml` filter](#maps-and-lists-yaml) instead. The argument must be a **top-level** context key: `values`, `docker`
+(or `secrets`, which writes every provider result: rarely what you want). `to-yaml values.resources` renders `null`.
+Only the first line is indented, so put the tag at column 0, where the output is meant to start.
+
+Use it in a config file rendered as a template
+([`x-compoje: {template: ...}`](configuration.md#secrets-and-configs-from-memory)), for example to hand an
+application its settings from `values`:
+
 ```yaml
-x-values:
+# stack.tpl.yml
+x-compoje:
+  docker:
+    stack: to-yaml-example
+  values:
+    server:
+      port: 8080
+      workers: 4
+    features:
+      - search
+      - export
+
+services:
+  app:
+    image: docker.io/nginx:stable
+    configs:
+      - source: app_settings
+        target: /etc/app/settings.yml
+
+configs:
+  app_settings:
+    x-compoje:
+      template: config/settings.yml
+```
+
+```yaml
+# config/settings.yml
 <% to-yaml values %>
 ```
 
-Writes a context entry as block-style YAML. The argument must be a **top-level** context key: `values`, `docker`
-(or `secrets`, which writes every provider result: rarely what you want). `to-yaml values.resources` renders `null`. Only the first line is indented, so put the tag at
-column 0, where the output is meant to start.
+The config Docker gets:
+
+```yaml
+server:
+  port: 8080
+  workers: 4
+features:
+- search
+- export
+```
+
+Each change to `values` changes the content, so compoje creates a new config. A runnable version is in
+[example-stacks/to-yaml/](../example-stacks/to-yaml/):
+`bb compoje deploy --dry-run example-stacks/to-yaml/stack.tpl.yml`.
+
+Don't use `to-yaml` in the stack file itself; use the [`yaml` filter](#maps-and-lists-yaml). compoje reads the
+stack file as YAML before rendering it (see [Control flow](#control-flow)). A tag at column 0 is not valid YAML
+there, so the stack fails to load (`Parser finished before end of input`). Indented, or in a comment, only its
+first output line lines up. Tags in YAML comments still run, so don't put `to-yaml` in a comment in the stack file
+either.
 
 ## Control flow
 
@@ -151,5 +227,6 @@ services:
       #
 ```
 
-Validate the rendered stack with `bb compoje render stack.tpl.yml | docker stack config -c -`, run in the stack's
-directory.
+`deploy` and `render` check that the rendered stack is valid YAML and fail if it isn't (`render` prints it first, so
+you can see why). To also check it as a compose file, run
+`bb compoje render stack.tpl.yml | docker stack config -c -` in the stack's directory.

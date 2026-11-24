@@ -145,6 +145,18 @@
             (str template-file ": template variable " v " is not defined; it renders empty"
                  " (add |default:\"...\" if that is intended)"))))))
 
+(defn parse-rendered
+  "Parse the rendered stack, failing with a message that points at the
+   rendered output (the template itself parsed before rendering)."
+  [stack-file contents]
+  (try (swarm-convert/parse-stack contents)
+       (catch Exception e
+         (throw (ex-info (str "Rendered stack " stack-file " is not valid YAML: " (ex-message e)
+                              ". Check what template tags and filters (e.g. to-yaml, yaml) write;"
+                              " compoje render prints the rendered stack anyway.")
+                         {:stack-file (str stack-file)}
+                         e)))))
+
 (defn- render-stack
   "Build the context (providers included) and render the stack template.
    Returns [context rendered-stack]."
@@ -167,22 +179,25 @@
    (x-compoje secrets/configs) compoje creates itself. Returns
    [stack-for-docker objects parsed]: stacks without managed objects pass
    through as text (parsed nil); others are parsed (YAML 1.1 octal ints, like
-   docker), externalized and sent as JSON (valid YAML)."
-  [{:keys [template-dir docker] :as context} contents]
-  (if-not (stack/uses-managed-objects? contents)
-    [contents [] nil]
-    (let [parsed (swarm-convert/parse-stack contents)
-          objects (stack/managed-objects
-                   parsed
-                   {:context context
-                    :stack-name (:stack docker)
-                    :render-template (fn [path]
-                                       (let [f (str (fs/file template-dir path))]
-                                         (doseq [w (check-variables f (render/load-template f) context)]
-                                           (log/warn w))
-                                         (render/render f context {})))})
-          externalized (stack/externalize parsed objects)]
-      [(json/generate-string externalized) objects externalized])))
+   docker), externalized and sent as JSON (valid YAML). Pass `parsed` when the
+   stack was already parsed."
+  ([context contents]
+   (prepare-stack context contents nil))
+  ([{:keys [template-dir docker] :as context} contents parsed]
+   (if-not (stack/uses-managed-objects? contents)
+     [contents [] nil]
+     (let [parsed (or parsed (swarm-convert/parse-stack contents))
+           objects (stack/managed-objects
+                    parsed
+                    {:context context
+                     :stack-name (:stack docker)
+                     :render-template (fn [path]
+                                        (let [f (str (fs/file template-dir path))]
+                                          (doseq [w (check-variables f (render/load-template f) context)]
+                                            (log/warn w))
+                                          (render/render f context {})))})
+           externalized (stack/externalize parsed objects)]
+       [(json/generate-string externalized) objects externalized]))))
 
 (defn deploy-driver
   "Engine to deploy with: --deploy-driver, else x-compoje docker.driver, else
@@ -288,12 +303,13 @@
 (defn- deploy*
   [{:keys [dry-run show-secrets] :as opts}]
   (let [[context contents] (render-stack opts)
+        rendered (parse-rendered (:config-file context) contents)
         {:keys [template-dir docker]} context
         driver (deploy-driver (:deploy-driver opts) context)]
     (when (str/blank? (some-> (:stack docker) str))
       (throw (ex-info "No stack name. Set x-compoje docker.stack in the stack file, or pass --stack."
                       {:stack-file (:stack-file opts)})))
-    (let [[stack-text objects parsed] (prepare-stack context contents)]
+    (let [[stack-text objects parsed] (prepare-stack context contents rendered)]
       (when dry-run
         (log/info (printable-context context show-secrets))
         (print contents)
@@ -309,7 +325,7 @@
         :docker-api
         (let [ep (api-endpoint context)]
           (log/info "Deploy using the Docker API at" (:host-url ep) (when dry-run "(dry run)"))
-          (api/deploy! (or parsed (swarm-convert/parse-stack contents))
+          (api/deploy! (or parsed rendered)
                        {:endpoint ep
                         :docker docker
                         :objects objects
@@ -323,16 +339,19 @@
 
   Runs the secret providers and renders the template like deploy, then writes
   the result to stdout (logs go to stderr), or to a file with --output. The
-  output can contain secret values: don't commit it."
+  output can contain secret values: don't commit it. Fails (after writing)
+  when the result is not valid YAML."
   {:flags (into shared-flags
                 ["-o, --output FILE" "Write the rendered stack to FILE instead of stdout (- means stdout)."])}
   [{:keys [output] :as opts}]
-  (let [[_context contents] (render-stack opts)]
+  (let [[context contents] (render-stack opts)]
     (if (or (nil? output) (= "-" output))
       (do (print contents)
           (flush))
       (do (spit output contents)
-          (log/warn "Wrote" output "- it can contain secret values; don't commit it."))))
+          (log/warn "Wrote" output "- it can contain secret values; don't commit it.")))
+    ;; after writing: the output is what you need to see why it doesn't parse
+    (parse-rendered (:config-file context) contents))
   ::done)
 
 (defn- migrate-report

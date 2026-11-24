@@ -5,6 +5,7 @@
             [compoje.files :as files]
             [compoje.utils :as u]
             [clojure.tools.logging :as log]
+            [clojure.walk :as walk]
             [selmer.filters :refer [add-filter!]]
             [yamlstar.core :as yaml]
             [selmer.parser :as parser]
@@ -61,6 +62,26 @@
   )
 
 (add-filter! :yaml-str yaml-str)
+
+(defn yaml-flow
+  "Render any value (map, list, scalar) as one-line flow YAML (JSON syntax),
+   with $ escaped in every string, keys included. One line, so it fits at
+   any indentation: `environment: <{ secrets.app|yaml }>`."
+  [v]
+  (json/generate-string
+   (walk/postwalk #(if (string? %) (escape-dollar %) %) v)))
+
+^:rct/test
+(comment
+  (yaml-flow {"DB_USER" "app" "DB_PASSWORD" "pa$w"}) ;=> "{\"DB_USER\":\"app\",\"DB_PASSWORD\":\"pa$$w\"}"
+  (yaml-flow {:db {:tags ["a$" "b"]}}) ;=> "{\"db\":{\"tags\":[\"a$$\",\"b\"]}}"
+  (yaml-flow {"$K" 1}) ;=> "{\"$$K\":1}"
+  (yaml-flow ["x" 1 true]) ;=> "[\"x\",1,true]"
+  (yaml-flow 5) ;=> "5"
+  (yaml-flow nil) ;=> "null"
+  )
+
+(add-filter! :yaml yaml-flow)
 
 (defn file-path
   [args context-map]

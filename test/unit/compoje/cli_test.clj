@@ -7,7 +7,8 @@
             [compoje.cli :as cli]
             [compoje.deploy.docker :as docker]
             [lambdaisland.cli :as licli]
-            [lambdaisland.cli.cmdspec :as cmdspec]))
+            [lambdaisland.cli.cmdspec :as cmdspec]
+            [yamlstar.core]))
 
 (def nginx "example-stacks/nginx/stack.tpl.yml")
 
@@ -128,6 +129,42 @@
       (is (= {"external" true "name" (:name (second objects))} (get-in sent ["configs" "app_conf"])))
       (testing "the secret value is not in what docker gets"
         (is (not (str/includes? text "demo-only-not-a-real-token")))))))
+
+(deftest to-yaml-example-test
+  (cli/register-default-providers!)
+  (let [stack-file "example-stacks/to-yaml/stack.tpl.yml"
+        ctx (cli/deploy-context {:stack-file stack-file})
+        text (compoje.render/render stack-file ctx {})
+        [_ [config] parsed] (cli/prepare-stack ctx text)]
+    (testing "the yaml filter writes a provider result and a values path as one-line flow YAML, $ escaped"
+      (is (str/includes? text "environment: {\"DB_USER\":\"app\",\"DB_PASSWORD\":\"demo-only-pa$$word\""))
+      (is (= {"DB_USER" "app" "DB_PASSWORD" "demo-only-pa$$word" "API_URL" "https://api.example.com/v1"}
+             (get-in parsed ["services" "app" "environment"])))
+      (is (= {"level" "info" "format" "json"} (get-in parsed ["services" "app" "labels"]))))
+    (testing "the to-yaml tag writes values into the config template"
+      (is (= [:config "app_settings"] [(:kind config) (:key config)]))
+      (is (= {"server" {"port" 8080 "workers" 4}
+              "log" {"level" "info" "format" "json"}
+              "features" ["search" "export"]}
+             (yamlstar.core/load (:data config)))))))
+
+(deftest rendered-stack-must-be-yaml
+  (let [dir (fs/create-temp-dir)
+        f (str (fs/path dir "stack.tpl.yml"))]
+    (try
+      ;; valid YAML before rendering, not after
+      (spit f "x-compoje:\n  docker:\n    stack: bad\n  values:\n    v: \"a: b: c\"\nx: <{ values.v }>\n")
+      (testing "render writes the output, then fails"
+        (let [out (java.io.StringWriter.)]
+          (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Rendered stack .*stack.tpl.yml is not valid YAML"
+                                (binding [*out* out] (cli/render {:stack-file f :verbosity 0}))))
+          (is (str/includes? (str out) "x: a: b: c"))))
+      (testing "deploy fails before running docker, with either engine"
+        (doseq [driver ["docker-cli" "docker-api"]]
+          (is (thrown-with-msg? clojure.lang.ExceptionInfo #"is not valid YAML"
+                                (with-out-str (cli/deploy {:stack-file f :verbosity 0 :dry-run true
+                                                           :deploy-driver driver}))))))
+      (finally (fs/delete-tree dir)))))
 
 (deftest object-create-args-test
   (is (= ["docker" "--context" "c" "secret" "create" "--label" "a=1" "--label" "b=2" "pw-1" "-"]

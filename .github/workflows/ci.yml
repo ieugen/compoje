@@ -48,7 +48,7 @@ jobs:
       # docker-cli: the default docker-api engine reads from a swarm even on --dry-run; runners have none
       - name: Dry-run example stacks
         run: |
-          for s in nginx ansible-vault file; do
+          for s in nginx ansible-vault file to-yaml; do
             bb compoje deploy --dry-run --deploy-driver docker-cli "example-stacks/$s/stack.tpl.yml" > /dev/null
           done
 

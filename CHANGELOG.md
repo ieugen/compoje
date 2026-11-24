@@ -5,6 +5,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `yaml` template filter: writes a map or list (e.g. a whole Vault secret, or a path into it) as one line of flow YAML, with `$` escaped for docker in every string, so it fits anywhere in the stack file: `environment: <{ secrets.app-env|yaml }>`. See docs/templates.md, "Maps and lists".
+- `example-stacks/to-yaml/`: the `yaml` filter for a service's environment, and the `to-yaml` tag writing `values` into a config file.
+
+### Changed
+- `deploy` and `render` check that the rendered stack is valid YAML, and fail with `Rendered stack ... is not valid YAML` if not. Before, with the `docker-cli` engine and no `x-compoje` secrets/configs, the text went to `docker stack deploy` unchecked (and `deploy --dry-run` passed); `render` never checked it. `render` still writes the output before failing.
+
+### Fixed
+- docs/templates.md showed `to-yaml` in the stack file, where it fails to parse (`Parser finished before end of input`). It now shows it in a config template (`x-compoje: {template: ...}`) and points to the `yaml` filter for the stack file.
+
 ## [0.7.0] - 2026-11-23
 
 ### Changed

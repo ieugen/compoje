@@ -245,7 +245,7 @@ Use `-v` (or `-vv`) for debug output, and see [known-issues.md](known-issues.md)
 
 ## Next steps
 
-- [example-stacks/](../example-stacks/): more examples (nginx, redis, ansible-vault, file)
+- [example-stacks/](../example-stacks/): more examples (nginx, redis, ansible-vault, file, to-yaml)
 - [ansible-vault.md](ansible-vault.md): secrets from ansible-vault
 - [cli.md](cli.md), [configuration.md](configuration.md), [templates.md](templates.md),
   [providers.md](providers.md): the full reference

@@ -1,0 +1,39 @@
+x-compoje:
+  docker:
+    stack: to-yaml-example
+  providers:
+    - name: files
+      type: compoje.providers.file/file
+  secrets:
+    # a map of environment variables; with Vault use the vault provider instead
+    - name: app-env
+      provider: files
+      file: secrets/app-env.yml
+  # the app's settings; config/settings.yml writes them out with the to-yaml tag
+  values:
+    server:
+      port: 8080
+      workers: 4
+    log:
+      level: info
+      format: json
+    features:
+      - search
+      - export
+
+services:
+  app:
+    image: docker.io/nginx:stable
+    # the whole map, as one line of flow YAML, with $ escaped for docker
+    environment: <{ secrets.app-env|yaml }>
+    # a path into a map works too
+    labels: <{ values.log|yaml }>
+    configs:
+      - source: app_settings
+        target: /etc/app/settings.yml
+
+configs:
+  # config/settings.yml is a template, rendered in memory with the same context
+  app_settings:
+    x-compoje:
+      template: config/settings.yml
