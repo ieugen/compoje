@@ -34,15 +34,16 @@
          client (vault/new-client addr)
          state (atom {})]
      (if app-role?
-       (let [client (approle/login client :app-role
-                                   {:role-id app-role-id
-                                    :secret-id app-secret-id})]
-         (swap! state merge {:client client
-                             :method :app-role}))
+       (do
+         (log/debug "Using app-role auth" (subs app-role-id 0 4))
+         (approle/login client app-role-id  app-secret-id)
+         (swap! state merge {:client client :method :app-role}))
        (if token
-         (let [client (vault/authenticate! client token)]
-           (swap! state merge {:client client
-                               :method :token}))
+         (do
+           (log/debug "Using token auth")
+           (let [client (vault/authenticate! client token)]
+             (swap! state merge {:client client
+                                 :method :token})))
          (log/debug "No valid auth method found.
                      Authenticate vault via one of:\n
                      * vault login -method=oidc\n
@@ -57,8 +58,8 @@
   [client secret-spec]
   (log/trace "Fetch secret" secret-spec)
   (let [{:keys [mount-path secret-path opts]} secret-spec
-        client (kv2/with-mount client mount-path)
-        content (kv2/read-secret client secret-path opts)]
+        client-with-path (kv2/with-mount client mount-path)
+        content (kv2/read-secret client-with-path secret-path opts)]
     (assoc secret-spec :content content)))
 
 (defrecord VaultSecretsProvider []
@@ -82,10 +83,33 @@
 
   ::vault
 
-  (def client (authenticated-client))
+  (filterv #(str/starts-with? (key %) "VAULT") (System/getenv))
+
+  (def client (authenticated-client {:addr "https://vault.do.drevidence.com:8200"}))
+
+
+  (def plain-client (vault/new-client "https://vault.do.drevidence.com:8200"))
+
+  (def ac (approle/login plain-client
+                         (System/getenv "VAULT_APP_ROLE_ID")
+                         (System/getenv "VAULT_APP_SECRET_ID")))
+
+
+  (System/getenv "VAULT_APP_ROLE_ID")
+  (System/getenv "VAULT_APP_SECRET_ID")
+
+  (let [dsc (kv2/with-mount plain-client "DocSearch")]
+    (kv2/list-secrets dsc ""))
+
+  (read-kvv2! plain-client {:mount-path "DocSearch"
+                            :secret-path "dev/app"
+                            :opts {}})
 
   (try
-    (let [client (kv2/with-mount client "my-secret")]
-      (kv2/list-secrets client "/"))
+    (let [client (kv2/with-mount plain-client "DocSearch")]
+      (kv2/read-secret client "dev/app"))
     (catch Exception e
-      (println e))))
+      (println e)))
+
+
+  )
